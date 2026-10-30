@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""factcheck CLI entry. Also runnable as `python3 -m factcheck`.
+
+No install step: the script puts the repo root on sys.path and imports the
+package beside it, the same property that lets this tool run from a
+checkout in hooks and degraded environments with no package manager.
+"""
+import pathlib
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+
+from factcheck.cli import main  # noqa: E402
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
