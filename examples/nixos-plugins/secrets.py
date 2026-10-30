@@ -48,5 +48,5 @@ def check_secrets(root, cfg):
                 findings.append(Finding(
                     'EXTRA', str(path),
                     f"the enrolls claim names '{host}' but {p.name} doesn't "
-                    f"enroll it"))
+                    f"enroll it", sep='    '))
     return findings

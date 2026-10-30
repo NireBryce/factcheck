@@ -122,13 +122,18 @@ switch:
 
 | check_docs.py check | home |
 |---|---|
-| links, anchors, contents + gen-contents, dates, siblings, recipes, skills, docrefs, counts, skill-files, rules, summaries, generated (the engine) | **factcheck core now** |
-| imports/table + static nix tree reading, secrets (sops enrollment), routes (reverse-proxy), lessons (+ the lessons-map contract), generated-region instances | **plugins carried by that repo** -- they encode its fleet facts |
+| links, anchors, contents + gen-contents, dates, siblings, recipes, skills, docrefs, counts, skill-files, rules, summaries, generated | **factcheck core now** |
+| imports/table (+ the static tree reading), secrets, routes, lessons (index half), generated region instances | **example plugins in `examples/nixos-plugins/`** -- at flip time they move into that repo and its config |
+| lessons (the lessons-map half) | **stays repo-carried, deliberately**: the map's glob semantics is a single shared module three readers there import so they cannot disagree; an example copy here would be exactly the duplicate the contract exists to prevent |
 
 Verified: on a copy of that repo, factcheck and check_docs.py produce
-identical finding sets for every check compared (13 of 15; `generated`
-stays off until its region plugin moves, and `imports`/`table`,
-`secrets`, `routes` and `lessons` are the repo-carried plugins above).
+identical finding sets for every check compared -- all fifteen except
+the lessons-map half, on an untouched tree and with defects injected,
+including the generated regions rendering byte-identically (same marker
+lines, same tables). The example plugins carry no fleet facts in code:
+names, routes and paths in their output come from the configured
+sources at runtime; the example config holds this fleet's values, whose
+docs domain is already public on its own site.
 
 ## Design notes worth keeping
 

@@ -96,9 +96,3 @@ wipes-import = "impermanence"
 # disabled here to avoid double-reporting the index.
 [checks]
 disabled = ["lessons"]
-
-# The generated regions are defined by the repo's own region plugin,
-# which does not exist until the flip -- the in-repo wiki_gen.py still
-# owns them, so the engine's check stays off here.
-[checks]
-disabled = ["generated"]

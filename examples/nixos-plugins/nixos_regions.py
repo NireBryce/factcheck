@@ -196,30 +196,37 @@ def module_layout(root):
 
 
 def register():
-    """Registers the regions. Called at import."""
+    """Registers the regions. Called at import. The `source` strings are
+    verbatim from the tool that wrote the current regions -- the marker
+    line is part of the rendered region, so byte-parity across the switch
+    needs these exact."""
     tree.cfg  # noqa: B018  (fail fast on import errors, not mid-check)
     genregions.register(Region(
         'hosts-table', 'wiki/fleet/hosts.md',
-        'the hosts file and each host\'s import list',
+        "flake/modules/host-config/hosts.nix and each host's import list",
         ['Host', 'Class', 'Role', 'Wipes `/root`?', 'Tailnet name'],
         'Host', ['Role'], host_rows, tool_name=WIKI_GEN))
-    for name, homelab in (('categories-index-system', False),
-                          ('categories-index-homelab', True)):
+    for name, homelab, source in (
+            ('categories-index-system', False,
+             'the categories under flake/modules/ and the pages in '
+             'wiki/config-structure/categories/'),
+            ('categories-index-homelab', True,
+             'the categories under flake/modules/homelab-config/homelab/ '
+             'and the pages in wiki/config-structure/categories/')):
         genregions.register(Region(
-            name, 'wiki/config-structure/categories/00-INDEX.md',
-            'the categories under flake/modules/ and the pages that index '
-            'them',
+            name, 'wiki/config-structure/categories/00-INDEX.md', source,
             ['Category', 'Directory', 'Class(es)', 'Imported by'],
             'Category', ['Imported by'], category_rows(homelab),
             tool_name=WIKI_GEN))
     genregions.register(Region(
-        'module-counts', 'wiki/config-structure/module-style-guide-for-agents.md',
-        'a count of the .nix files under the modules tree',
+        'module-counts',
+        'wiki/config-structure/module-style-guide-for-agents.md',
+        'a count of the .nix files under flake/modules/',
         ['What', 'Files'], 'What', [], count_rows, tool_name=WIKI_GEN))
     genregions.register(Block(
         'module-layout', 'wiki/config-structure/architecture.md',
-        'the categories under the modules tree, drawn by the module-graph '
-        'app',
+        'the categories under flake/modules/, drawn by the '
+        'flake-module-graph input',
         module_layout, needs=('nix',), tool_name=WIKI_GEN))
 
 
