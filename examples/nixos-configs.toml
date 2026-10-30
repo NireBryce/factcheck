@@ -1,0 +1,33 @@
+# factcheck configuration for a checkout of the NireBryce/nixos-configs
+# repository. Run read-only against a checkout:
+#
+#     factcheck check --root ~/nixos --config examples/nixos-configs.toml
+#
+# This file is the dogfood harness until that repo adopts factcheck (its
+# own copy of this config would then live at its root). It reproduces the
+# scopes and bindings the in-repo checker uses, for the checks factcheck
+# ships today; the repo-specific checks (imports/table, secrets, routes,
+# lessons, generated regions) are later plugins and are not covered here.
+
+[scopes]
+docs = ["wiki/**/*.md", "AGENTS.md", ".agents/rules/**/*.md"]
+pages = ["wiki/**/*.md"]
+
+[dates]
+line = '_Last modified: {date}_'
+
+[contents]
+exempt = ['^wiki/agent-lessons-learned(\.md|/)', '-for-agents\.md$']
+
+[siblings]
+suffix = "-for-agents"
+required-words = 1000
+budget = 0.5
+fold-heading = "Quick facts"
+exempt = ['^wiki/agent-lessons-learned(\.md|/)', '-history\.md$']
+
+[recipes]
+justfile = ".justfile"
+
+[skills]
+dirs = [".agents/skills"]

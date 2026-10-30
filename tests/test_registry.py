@@ -129,6 +129,34 @@ class Cli(unittest.TestCase):
             capture_output=True, text=True)
         self.assertEqual(r.returncode, 2)
 
+    def test_config_disabled_check_does_not_run_and_is_not_an_error(self):
+        # Unlike --skip (validated strictly -- a typo should stop the run),
+        # config `disabled` may name a check that isn't registered in this
+        # run at all, and says nothing when it fires.
+        import contextlib
+        import tempfile
+        from factcheck.config import Config
+        saved = dict(registry.CHECKS)
+        try:
+            registry.CHECKS.clear()
+
+            def bad(root, cfg):
+                from factcheck.findings import Finding
+                return [Finding('BAD', 'x', 'always')]
+            registry.check('zz-bad')(bad)
+            with tempfile.TemporaryDirectory() as tmp:
+                cfg = Config(pathlib.Path(tmp), {'checks': {'disabled': [
+                    'zz-bad', 'not-registered-here']}})
+                buf = io.StringIO()
+                code = cli._run_checks('check', pathlib.Path(tmp), cfg,
+                                       set(), buf)
+            self.assertEqual(code, 0)
+            self.assertNotIn('BAD', buf.getvalue())
+            self.assertNotIn('skipped', buf.getvalue())
+        finally:
+            registry.CHECKS.clear()
+            registry.CHECKS.update(saved)
+
     def test_capability_skip_says_so(self):
         saved = dict(registry.CHECKS)
         try:

@@ -58,9 +58,14 @@ def _run_checks(cmd, root, cfg, skip, out):
         out.write(f"unknown command {cmd!r} -- try `factcheck checks`\n")
         return 2
 
+    # `disabled` comes from config and is validated loosely: a config may
+    # disable a check that isn't registered in this run (its plugin isn't
+    # loaded here, say) without that being an error. `--skip` names are
+    # validated strictly: a typo there should stop the run, not no-op it.
+    disabled = cfg.disabled()
     all_findings = []
     for name, c in registry.registered():
-        if cmd not in (name, 'check') or name in skip:
+        if cmd not in (name, 'check') or name in skip or name in disabled:
             continue
         if name in cap_skip:
             out.write(f"{name}: skipped (needs {cap_skip[name]}, "
@@ -131,4 +136,4 @@ def main(argv, out=None):
         return 0
 
     plugins.load(cfg)
-    return _run_checks(cmd, root, cfg, skip - cfg.disabled(), out)
+    return _run_checks(cmd, root, cfg, skip, out)

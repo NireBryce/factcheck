@@ -1,0 +1,11 @@
+# factcheck's own configuration: this repo's docs are its own dogfood
+# surface for the general checks, but they deliberately don't follow the
+# wiki page conventions (Contents blocks, last-modified lines, sibling
+# pairs) that some checks enforce -- those defaults exist for the repos
+# that DO follow those conventions.
+
+[scopes]
+docs = ["README.md", "plugins/example/*.py"]
+
+[checks]
+disabled = ["contents", "dates", "siblings"]
