@@ -100,7 +100,7 @@ def check_counts(root, cfg):
                         findings.append(Finding(
                             'STALE', str(path),
                             f"'{m.group(0)}' says {claimed} {noun} but "
-                            f"{source} defines {actual}"))
+                            f"{source} defines {actual}", sep='    '))
                 elif kind == 'class':
                     cls = words[1].lower()
                     claimed, actual = _num(words[0]), values[cls]
@@ -108,17 +108,18 @@ def check_counts(root, cfg):
                         findings.append(Finding(
                             'STALE', str(path),
                             f"'{m.group(0)}' says {claimed} {cls} {noun} "
-                            f"but {source} defines {actual}"))
+                            f"but {source} defines {actual}", sep='    '))
                 else:
                     lead = _num(words[0])
                     total, cls = _num(words[1]), words[2].lower()
                     if lead > total:
                         findings.append(Finding(
                             'STALE', str(path),
-                            f"'{m.group(0)}' -- {lead} exceeds {total}"))
+                            f"'{m.group(0)}' -- {lead} exceeds {total}",
+                            sep='    '))
                     if total != values[cls]:
                         findings.append(Finding(
                             'STALE', str(path),
                             f"'{m.group(0)}' says {total} {cls} {noun} but "
-                            f"{source} defines {values[cls]}"))
+                            f"{source} defines {values[cls]}", sep='    '))
     return findings

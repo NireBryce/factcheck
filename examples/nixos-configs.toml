@@ -31,6 +31,11 @@ justfile = ".justfile"
 [skills]
 dirs = [".agents/skills"]
 
+# Repo data: directory roots that moved, where a doc still naming the old
+# path is a finding. Adding a future move is one line here.
+[docrefs]
+moved-dirs = { ".claude/hooks" = ".agents/hooks" }
+
 # The host-roster counters for `counts`, read statically from hosts.nix
 # (no nix evaluation). Absolute path because the plugin lives in this
 # repo until the flip; it moves into nixos-configs then.

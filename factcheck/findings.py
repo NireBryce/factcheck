@@ -19,11 +19,12 @@ class Finding:
     message: str
     review: bool = False
     see: str | None = None
+    sep: str = '  '
 
     def __str__(self):
         if self.review:
             return f"REVIEW   {self.path}: {self.message}"
-        return f"{self.tag}  {self.path}: {self.message}"
+        return f"{self.tag}{self.sep}{self.path}: {self.message}"
 
 
 def see_lines(findings):

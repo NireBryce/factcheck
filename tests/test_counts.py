@@ -47,6 +47,9 @@ class Counts(Tree):
         self.assertEqual(f[0].tag, 'STALE')
         self.assertIn('says 5', f[0].message)
         self.assertIn('defines 3', f[0].message)
+        # The STALE tag renders with the wide separator the ancestor
+        # tool's counts findings use -- output format is a contract.
+        self.assertTrue(str(f[0]).startswith('STALE    '))
 
     def test_class_scoped_claim(self):
         self.write('docs/guide.md',
