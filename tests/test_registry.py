@@ -103,6 +103,8 @@ class Cli(unittest.TestCase):
     def test_skip_leaves_a_check_out_and_says_so(self):
         saved = dict(registry.CHECKS)
         try:
+            registry.CHECKS.clear()
+
             def ok(root, cfg):
                 return []
 
