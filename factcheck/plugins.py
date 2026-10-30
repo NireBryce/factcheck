@@ -19,9 +19,11 @@ import sys
 
 def load(cfg):
     """Load every plugin in `[plugins] load`, in order, path relative to
-    the config's root."""
+    the config's root. The plugin's own directory goes on sys.path first,
+    so a multi-file plugin can import its sibling modules."""
     for rel in cfg.section('plugins').get('load', []):
         path = (cfg.root / rel).resolve()
+        sys.path.insert(0, str(path.parent))
         name = 'factcheck_plugin_' + path.stem.replace('-', '_')
         spec = importlib.util.spec_from_file_location(name, path)
         mod = importlib.util.module_from_spec(spec)

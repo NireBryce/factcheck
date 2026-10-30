@@ -36,15 +36,66 @@ dirs = [".agents/skills"]
 [docrefs]
 moved-dirs = { ".claude/hooks" = ".agents/hooks" }
 
-# The host-roster counters for `counts`, read statically from hosts.nix
-# (no nix evaluation). Absolute path because the plugin lives in this
-# repo until the flip; it moves into nixos-configs then.
+# The fleet's plugins: the static tree reader, the membership checks
+# built on it, the two set-claim checks, the lessons index, and the
+# generated regions. Absolute paths because these live in this repo
+# until the flip; they move into nixos-configs' own plugins/ then.
+# Everything fleet-specific in their OUTPUT (host names, routes) comes
+# from the configured sources at runtime.
 [plugins]
-load = ["/home/elly/projects/agents/factcheck/examples/nixos-plugins/roster.py"]
+load = [
+  "/home/elly/projects/agents/factcheck/examples/nixos-plugins/tree.py",
+  "/home/elly/projects/agents/factcheck/examples/nixos-plugins/imports_table.py",
+  "/home/elly/projects/agents/factcheck/examples/nixos-plugins/secrets.py",
+  "/home/elly/projects/agents/factcheck/examples/nixos-plugins/routes.py",
+  "/home/elly/projects/agents/factcheck/examples/nixos-plugins/lessons_index.py",
+  "/home/elly/projects/agents/factcheck/examples/nixos-plugins/nixos_regions.py",
+]
 
 [roster]
 file = "flake/modules/host-config/hosts.nix"
 name-prefix = "nire-"
+
+[tree]
+modules = "flake/modules"
+areas = ["general-config", "hardware-config", "homelab-config", "users-config"]
+hosts-file = "flake/modules/host-config/hosts.nix"
+host-config-dir = "flake/modules/host-config"
+name-prefix = "nire-"
+host-constructors = { nixos = "mkHost", darwin = "mkDarwinHost" }
+
+[imports]
+pages-dir = "wiki/config-structure/categories"
+class-label = "NixOS"
+index-page = "wiki/config-structure/categories/00-INDEX.md"
+
+[secrets]
+file = "flake/modules/general-config/system/secrets/.sops.yaml"
+name-prefix = "nire-"
+
+[routes]
+sources = ["flake/modules/homelab-config/homelab/reverse-proxy/caddy/caddy.nix",
+           "wiki/config-structure/categories/reverse-proxy-history.md"]
+base-domain = "ts-cube.moose-micro.ts.net"
+
+[lessons]
+page = "wiki/agent-lessons-learned.md"
+dir = "wiki/agent-lessons-learned"
+
+[regions]
+flake = "flake"
+homelab = "homelab-config/homelab"
+pages-dir = "wiki/config-structure/categories"
+tailnet-template = "ts-{short}"
+wipes-import = "impermanence"
+
+# The lessons-map half of `lessons` is not in the example plugin: its
+# glob semantics is a single shared module three readers in
+# nixos-configs import so they cannot disagree. Until the flip, the
+# in-repo checker still validates the map, so the plugin's half is
+# disabled here to avoid double-reporting the index.
+[checks]
+disabled = ["lessons"]
 
 # The generated regions are defined by the repo's own region plugin,
 # which does not exist until the flip -- the in-repo wiki_gen.py still

@@ -22,6 +22,7 @@ CLI can call it with `write=True`.
 """
 import re
 
+from . import capabilities
 from .mdcore import fences
 
 START = re.compile(r'(?m)^<!-- generated:([\w-]+)\b[^\n]*-->[ \t]*$')
@@ -83,19 +84,25 @@ class Region:
     """One generated table. `rows_fn(root)` yields (row_id, {header: cell})
     for the derived columns, in display order; `hand` names the columns
     carried over from the existing table. `needs` names capabilities the
-    row source requires (the `generated` check skips the whole run only if
-    EVERY region needs it; per-region failure is a GEN ERROR finding)."""
+    row source requires -- a region whose capability is unavailable is
+    skipped with a stated REVIEW finding, never silently and never as a
+    hard failure (the whole point of generating before checking is that a
+    machine missing the generator's tool still checks everything else).
+    `tool_name` is what the marker names as the regenerator; a plugin
+    replacing an ancestor tool's regions passes that tool's command so
+    rendered regions stay byte-identical across the switch."""
 
     source_file = '<region>'
 
     def __init__(self, name, page, source, headers, key, hand, rows_fn,
-                 needs=()):
+                 needs=(), tool_name='factcheck'):
         self.name, self.page, self.source = name, str(page), source
         self.headers, self.key, self.hand = headers, key, hand
         self.rows_fn, self.needs = rows_fn, tuple(needs)
+        self.tool_name = tool_name
 
     def marker(self):
-        note = (f'from {self.source}, by factcheck; change the '
+        note = (f'from {self.source}, by {self.tool_name}; change the '
                 f'source, not this table')
         if self.hand:
             note += '. Hand-written, kept per row: ' + ', '.join(self.hand)
@@ -127,8 +134,10 @@ class Block(Region):
     text, rewritten as a unit. No hand-written cells, so no dropped
     rows."""
 
-    def __init__(self, name, page, source, body_fn, needs=()):
-        super().__init__(name, page, source, [], None, [], None, needs)
+    def __init__(self, name, page, source, body_fn, needs=(),
+                 tool_name='factcheck'):
+        super().__init__(name, page, source, [], None, [], None, needs,
+                         tool_name)
         self.body_fn = body_fn
 
     def render(self, root, old_body):
@@ -174,6 +183,13 @@ def run(root, pages, write):
                     'UNKNOWN REGION', rel,
                     f"'generated:{name}' is not a registered region "
                     f"({', '.join(sorted(REGIONS)) or 'none registered'})"))
+                continue
+            if missing := [n for n in region.needs
+                           if not capabilities.available(n)]:
+                findings.append(Finding(
+                    'REGION NEEDS', rel,
+                    f"region '{name}' needs {missing[0]}, unavailable here "
+                    f"-- everything else still checked", review=True))
                 continue
             try:
                 fresh, empty, dropped = region.render(
