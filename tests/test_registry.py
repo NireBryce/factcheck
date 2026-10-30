@@ -129,6 +129,24 @@ class Cli(unittest.TestCase):
             registry.CHECKS.clear()
             registry.CHECKS.update(saved)
 
+    def test_positional_repo_root_is_honored_not_dropped(self):
+        # The edit hook calls `factcheck siblings <root>`; a silently
+        # ignored positional made the check scan the harness's cwd and
+        # exit 0 -- the wrong-repo green this test exists to prevent.
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / 'wiki').mkdir()
+            (root / 'wiki/page.md').write_text(
+                '# P\n\n_Last modified: 2026-01-01_\n\n## A\n\nx\n')
+            (root / 'wiki/page-for-agents.md').write_text(
+                '# P\n\n_Last modified: 2020-01-01_\n\n## A\n\nx\n')
+            out = io.StringIO()
+            code = cli.main(['--skip=nope' if False else 'siblings',
+                             str(root)], out=out)
+        self.assertEqual(code, 1)
+        self.assertIn('STALE SIBLING', out.getvalue())
+
     def test_skip_rejects_an_unknown_check(self):
         r = subprocess.run(
             [sys.executable, str(SCRIPT), 'check', '--skip=nope'],

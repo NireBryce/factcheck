@@ -123,7 +123,16 @@ def main(argv, out=None):
             i += 1
 
     cmd = positional[0] if positional else 'check'
-    root = Path(root_override).resolve() if root_override else Path.cwd()
+    # A check command takes an optional positional repo-root --
+    # `factcheck siblings /path/to/repo`, the shape hooks and scripts
+    # call with. It must never be silently dropped: a root that stays
+    # cwd makes the check scan the wrong repository and exit 0.
+    root_arg = positional[1] if len(positional) > 1 else None
+    root = Path(root_override or root_arg or Path.cwd()).resolve()
+    if len(positional) > 1 and cmd not in ('check', *registry.names(),
+                                           *fixers.FIXERS):
+        out.write(f"unexpected argument {positional[1]!r} for {cmd!r}\n")
+        return 2
     cfg = config.load(root, config_override)
 
     # Fixers rewrite files, so they take explicit paths and never join
