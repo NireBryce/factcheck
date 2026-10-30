@@ -87,14 +87,14 @@ def check_contents(root, cfg):
         if actual is None:
             if expected and not any(rx.search(rel) for rx in exempt):
                 findings.append(Finding(
-                    'MISSING CONTENTS', rel,
+                    'MISSING CONTENTS', str(path),
                     f"has {len(expected)} `##` headings but no '## Contents' "
                     f"block, and isn't exempt -- add one with "
                     f"`factcheck fix-contents {path}`", see=SEE))
             continue
         if actual != expected:
             findings.append(Finding(
-                'STALE CONTENTS', rel,
+                'STALE CONTENTS', str(path),
                 f"its '## Contents' list doesn't match its own headings -- "
                 f"fix with `factcheck fix-contents {path}`", see=SEE))
     return findings
