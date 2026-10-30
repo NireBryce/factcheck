@@ -13,7 +13,8 @@ import unittest
 from factcheck import checks as builtin_checks  # noqa: F401  (registers)
 from factcheck import cli, registry
 
-SCRIPT = pathlib.Path(__file__).resolve().parent.parent / 'bin' / 'factcheck'
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+SCRIPT = REPO_ROOT / 'bin' / 'factcheck'
 
 
 class EveryBuiltinIsRegistered(unittest.TestCase):
@@ -82,7 +83,10 @@ class Ordering(unittest.TestCase):
 class Cli(unittest.TestCase):
     def run_cli(self, *args):
         out = io.StringIO()
-        code = cli.main(list(args), out=out)
+        # Root pinned to this repo: cwd may be any project, whose
+        # factcheck.toml (plugins, scopes) would otherwise leak into a
+        # `check` run that is only testing dispatch.
+        code = cli.main(['--root', str(REPO_ROOT), *args], out=out)
         return code, out.getvalue()
 
     def test_unknown_subcommand_exits_2(self):
@@ -165,7 +169,7 @@ class Cli(unittest.TestCase):
             registry.CHECKS.clear()
             registry.check('zz-needs', needs=('no-such-capability',))(
                 lambda root, cfg: [])
-            code, outtext = self.run_cli('check')
+            code, outtext = self.run_cli('zz-needs')
             self.assertEqual(code, 0)
             self.assertIn('zz-needs: skipped (needs no-such-capability',
                           outtext)
