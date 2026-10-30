@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Enforces AGENTS.md's commit-trailer convention: "Co-Authored-By: Claude",
+# with no model name and no email. Auto-corrects rather than rejecting:
+# the model name comes from whatever the harness's system prompt says, and
+# an agent cannot verify which model is executing it, so re-reading the
+# message would not have caught it.
+#
+# Only trailers naming Claude are touched. Any other agent's trailer (its
+# own name, no model, no email) passes through; AGENTS.md says to form
+# those correctly at write time, since no hook can know which agent wrote
+# a commit. Existing commits keep their labels.
+#
+# One of three layers: `attribution.commit` in .agents/settings.json tells
+# Claude Code the canonical form, this hook fixes the message in clones
+# that wired core.hooksPath, and scripts/check_trailers.py fails a PR in
+# CI for clones that didn't. The key's capitalization varies (Claude
+# Code's own default is `Co-authored-by: Claude <...>`), matched with
+# bracket classes because BSD sed has no case-insensitive flag.
+#
+# Adapted from nixos-configs' .githooks/commit-msg.
+set -euo pipefail
+msg_file="$1"
+
+canonical="Co-Authored-By: Claude"
+# Matches the trailer whether or not a model name and/or an email got
+# appended: "Claude", "Claude Opus 5 <noreply@anthropic.com>",
+# "Claude Sonnet 5", "Claude <claude@anthropic.com>", etc. -- all correct
+# down to the bare canonical form.
+pattern='^[Cc]o-[Aa]uthored-[Bb]y:[[:space:]]+Claude([[:space:]]+[^<]*)?([[:space:]]*<[^>]*>)?[[:space:]]*$'
+
+if grep -qE "$pattern" "$msg_file" && ! grep -qxF "$canonical" "$msg_file"; then
+    # Temp file + mv instead of sed -i: BSD sed's "-i -E" eats "-E" as the
+    # backup suffix, and this hook runs on both darwin and NixOS.
+    tmp=$(mktemp "${msg_file}.XXXXXX")
+    sed -E "s/${pattern}/${canonical}/" "$msg_file" > "$tmp"
+    mv "$tmp" "$msg_file"
+    echo "commit-msg: corrected the Co-Authored-By trailer to the canonical form (agent name only -- no model name, no email)" >&2
+fi
