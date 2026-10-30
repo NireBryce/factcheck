@@ -13,7 +13,8 @@
         "x86_64-darwin"
         "aarch64-darwin"
       ];
-      forAll = nixpkgs.lib.genAttrs systems;
+      forAll = f: nixpkgs.lib.genAttrs systems
+        (system: f nixpkgs.legacyPackages.${system});
       pkg = pkgs: pkgs.stdenv.mkDerivation {
         name = "factcheck";
         src = self;
