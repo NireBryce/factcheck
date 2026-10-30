@@ -89,8 +89,9 @@ def _run_checks(cmd, root, cfg, skip, out):
     return 1 if hard else 0
 
 
-def main(argv, out=None):
+def main(argv=None, out=None):
     out = out or sys.stdout
+    argv = sys.argv[1:] if argv is None else argv
     root_override = config_override = None
     skip = set()
     positional = []

@@ -42,6 +42,14 @@ API's stability.
 
 ## Quickstart
 
+On a machine without nix, install it like any Python tool (it is
+stdlib-only, so the install is the only step):
+
+```sh
+pipx install git+https://github.com/NireBryce/factcheck
+# or: pip install --user git+https://github.com/NireBryce/factcheck
+```
+
 ```sh
 ./bin/factcheck check              # every registered check, against cwd
 ./bin/factcheck links --root .    # one check
