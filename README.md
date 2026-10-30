@@ -54,6 +54,19 @@ load = ["plugins/my-checks.py"]
 | `siblings` | the `<page>-for-agents.md` pairing: no orphans, long sources have a sibling (or a folded `## Quick facts` section), the sibling isn't older than its source unless a dated reviewed-line says why, word budget (REVIEW only), back-links both ways | scope `pages`, `[siblings] suffix, required-words, budget, fold-heading, exempt` |
 | `recipes` | every backtick `` `just <recipe>` `` mention names a real recipe (handles `just key=value <recipe>` overrides and `mod` module names) | scope `docs`, `[recipes] justfile` |
 | `skills` | every "skill X" / "X skill" mention names a real skill directory | scope `docs`, `[skills] dirs` |
+| `skill-files` | the skill files themselves: the four lookups re-applied to skill prose (backticked-anywhere, bare-in-fences `just` mentions; skill mentions; relative links; repo-rooted backtick paths), plus SKILL.md-only rules — frontmatter `name` matching its directory, a one-sentence description with no repo paths, `when_to_use` under the harness listing cap, plain-YAML-safe values, unknown frontmatter keys, the `**Needs:**` tag vocabulary, and a ban on ` ```! ` / `!`backtick`` ` injection syntax | `[skills] dirs`, `[recipes] justfile`, `[skill-files]` keys/caps/prefixes/needs |
+| `docrefs` | cross-references the narrower checks miss: `just <module> <helper>` naming no recipe in that just module; a `<skills-dir>/<name>` path or an unquoted hyphenated skill mention naming no skill directory; backticked paths under directories that moved (a config data table); a sentence naming one markdown page plus a quoted "…section" the page doesn't have; and BARE COUNT — a number from three up directly before a countable noun, unless the sentence names that many items, ends in a colon, carries a date or "as of", or opts out with `<!-- count-ok: reason -->` | scope `docs` + skills, `[docrefs] agent-module, moved-dirs, count-nouns, exempt` |
+| `counts` | prose count claims — "all five hosts", "all three nixos hosts", "two of the three nixos hosts" — against actual counts | scope `docs`, `[counts] noun, classes, source, counters`, counters from plugins |
+| `rules` | path-scoped rule files: frontmatter is exactly a non-empty `paths:` list of quoted globs, every glob matches a git-tracked file, and the pointer doc names each rule | `[rules] dir, pointer` |
+| `summaries` | every tracked file under a directory carries a marker line (default: `# package summary:` on package modules) | `[summaries] dir, suffix, marker, tag, exclude-*` |
+| `generated` | every registered generated region exists on its home page and renders exactly what its source produces today; hand-written columns are carried per row, and a new row's empty hand cell is a finding until filled | regions registered by plugins |
+
+Counters for `counts` come from three places, in precedence order: a
+static value in config (`total = 5`), a glob count (`total = { glob =
+"units/*.md" }`), or a plugin-registered function — see
+`examples/nixos-plugins/roster.py`, which reads a hosts file statically,
+no evaluation needed. A repo with no counters at all gets a vacuous
+pass; a *partially* configured set is a finding, not a silent gap.
 
 Conventions vary; bindings are config. The defaults are the conventions
 factcheck was extracted from -- every one overridable, none load-bearing.
@@ -109,9 +122,13 @@ switch:
 
 | check_docs.py check | home |
 |---|---|
-| links, anchors, contents + gen-contents, dates, siblings, recipes, skills | **factcheck core now** (as `links`, `anchors`, `contents` + `fix-contents`, `dates`, `siblings`, `recipes`, `skills`) |
-| docrefs (helper lookup, quoted-section, bare-count rule), counts, skill-files frontmatter rules, rules (`paths:` frontmatter), summaries (marker line), generated-region engine | **factcheck core later** |
+| links, anchors, contents + gen-contents, dates, siblings, recipes, skills, docrefs, counts, skill-files, rules, summaries, generated (the engine) | **factcheck core now** |
 | imports/table + static nix tree reading, secrets (sops enrollment), routes (reverse-proxy), lessons (+ the lessons-map contract), generated-region instances | **plugins carried by that repo** -- they encode its fleet facts |
+
+Verified: on a copy of that repo, factcheck and check_docs.py produce
+identical finding sets for every check compared (13 of 15; `generated`
+stays off until its region plugin moves, and `imports`/`table`,
+`secrets`, `routes` and `lessons` are the repo-carried plugins above).
 
 ## Design notes worth keeping
 

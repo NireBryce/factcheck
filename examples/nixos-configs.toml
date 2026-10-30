@@ -4,10 +4,9 @@
 #     factcheck check --root ~/nixos --config examples/nixos-configs.toml
 #
 # This file is the dogfood harness until that repo adopts factcheck (its
-# own copy of this config would then live at its root). It reproduces the
-# scopes and bindings the in-repo checker uses, for the checks factcheck
-# ships today; the repo-specific checks (imports/table, secrets, routes,
-# lessons, generated regions) are later plugins and are not covered here.
+# own copy of this config would then live at its root, with the plugin
+# paths in-repo). Sections left out fall back to the tool's defaults,
+# which are this repo's conventions.
 
 [scopes]
 docs = ["wiki/**/*.md", "AGENTS.md", ".agents/rules/**/*.md"]
@@ -31,3 +30,19 @@ justfile = ".justfile"
 
 [skills]
 dirs = [".agents/skills"]
+
+# The host-roster counters for `counts`, read statically from hosts.nix
+# (no nix evaluation). Absolute path because the plugin lives in this
+# repo until the flip; it moves into nixos-configs then.
+[plugins]
+load = ["/home/elly/projects/agents/factcheck/examples/nixos-plugins/roster.py"]
+
+[roster]
+file = "flake/modules/host-config/hosts.nix"
+name-prefix = "nire-"
+
+# The generated regions are defined by the repo's own region plugin,
+# which does not exist until the flip -- the in-repo wiki_gen.py still
+# owns them, so the engine's check stays off here.
+[checks]
+disabled = ["generated"]
