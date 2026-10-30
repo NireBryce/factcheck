@@ -16,6 +16,30 @@ degraded environments that have no package manager. Extracted from a
 working doc-vs-repo checker in a large NixOS configuration repo, where
 every design choice below was paid for at least once.
 
+## Status: experimental -- review findings, and review the checks, before trusting either
+
+This tool is young (extracted 2026-10-30) and its API -- config keys,
+the plugin registry, finding formats -- will still move. Three things
+follow from that:
+
+- **Read a finding before acting on it.** The checks are heuristics over
+  prose; a hard finding is a claim worth checking, not a verified fact,
+  and the REVIEW findings are explicitly not assertions at all.
+- **Review what a check enforces before gating anything on it.** The
+  defaults encode the conventions of the repo it was extracted from
+  (page headers, sibling pairs, generated regions); they may not be your
+  conventions, and "the run is green" then means less than it looks.
+  Its first consumer keeps every repo-specific checker as an in-repo
+  plugin, reviewed there -- copy that discipline rather than trusting
+  the defaults blind.
+- **Pin or vendor if you adopt it.** A moving `main` behind a gate is a
+  supply-chain decision to make deliberately, not inherit.
+
+The extraction was parity-verified: on its source repo, factcheck and
+the checker it replaced produced identical findings. The warning above
+is about the parts no parity run can prove -- fit to your repo, and the
+API's stability.
+
 ## Quickstart
 
 ```sh
