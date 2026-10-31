@@ -1,0 +1,67 @@
+name: Bug report
+description: A finding that is wrong, drift that went uncaught, or a crash.
+labels: [bug]
+body:
+  - type: dropdown
+    id: check
+    attributes:
+      label: Check
+      description: "`factcheck checks` lists them; pick the one whose behavior is wrong, or \"not check-specific\"."
+      options:
+        - conflicts
+        - recipes
+        - skills
+        - skill-files
+        - links
+        - anchors
+        - paths
+        - contents
+        - dates
+        - counts
+        - generated
+        - siblings
+        - lessons-index
+        - drift
+        - rules
+        - summaries
+        - docrefs
+        - restatement
+        - not check-specific
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened vs what was expected
+      description: >-
+        Say which: a false positive (a finding on docs that are actually
+        right), a false negative (drift that should have been caught), a
+        crash, or the right finding with the wrong advice. Include the
+        actual and expected behavior and the command or page that shows it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Command output
+      description: The relevant output of the factcheck run. Redact anything secret-shaped.
+      render: shell
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: >-
+        The smallest markdown snippet and repo layout that shows it. A
+        minimal input here is most of a fixture test; every check lands
+        with one, in the same change.
+
+  - type: input
+    id: env
+    attributes:
+      label: factcheck revision and Python version
+      description: "The commit or installed version, and `python3 --version` -- e.g. \"main @ 5c4e557, Python 3.13\"."
+    validations:
+      required: true
