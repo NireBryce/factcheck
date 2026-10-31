@@ -55,6 +55,26 @@ class Restatement(Tree):
         self.assertEqual(self.findings(data), [])
         self.assertEqual(len(self.findings()), 1)
 
+    def test_repeated_boilerplate_is_bounded(self):
+        # A sentence repeated inside every doc: one finding per pair, and
+        # the shared total can't exceed what either doc has.
+        for i in range(4):
+            self.write(f'd{i}.md', (FACT + '. ') * 30 + '\n')
+        f = self.findings()
+        self.assertEqual(len(f), 6)
+        doc_words = len(restatement.words_of((FACT + '. ') * 30))
+        for x in f:
+            words = int(x.message.split('~')[1].split()[0])
+            self.assertLessEqual(words, doc_words)
+
+    def test_malformed_exempt_pairs_is_a_config_finding(self):
+        self.write('a.md', f'{FACT}\n')
+        for bad in (['only-one'], [['a', 'b', 'c']], [['(', 'x']]):
+            data = {**ON, 'restatement': {'enable': True,
+                                          'exempt-pairs': bad}}
+            self.assertEqual([x.tag for x in self.findings(data)],
+                             ['BAD CONFIG'])
+
     def test_off_unless_enabled(self):
         self.write('a.md', f'{FACT}\n')
         self.write('b.md', f'{FACT}\n')

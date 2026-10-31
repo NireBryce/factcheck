@@ -92,25 +92,28 @@ def is_sibling_pair(a, b, suffix):
 def overlaps(files, min_words):
     """[(words, (a, b), spans)] for every pair sharing min_words+, most
     first. `files` is {name: [(word, lineno)]}."""
-    index = collections.defaultdict(lambda: collections.defaultdict(list))
+    # One position per shingle per file, its first: a passage repeated
+    # inside one doc (a footer, a table row) would otherwise pair every
+    # copy with every copy elsewhere, quadratic in the repeats.
+    index = collections.defaultdict(dict)
     for name, tagged in files.items():
         words = [w for w, _ in tagged]
         for i in range(len(words) - NGRAM + 1):
-            index[tuple(words[i:i + NGRAM])][name].append(i)
+            index[tuple(words[i:i + NGRAM])].setdefault(name, i)
     pairs = collections.defaultdict(list)
     for positions in index.values():
         names = sorted(positions)
         for i, a in enumerate(names):
             for b in names[i + 1:]:
-                for pa in positions[a]:
-                    for pb in positions[b]:
-                        pairs[(a, b)].append((pa, pb))
+                pairs[(a, b)].append((positions[a], positions[b]))
     out = []
-    for pair, shared in pairs.items():
+    for (a, b), shared in pairs.items():
         spans = spans_from_shared(shared)
-        total = sum(n + NGRAM - 1 for _, _, n in spans)
+        # Overlapping spans can't share more words than the shorter doc has.
+        total = min(sum(n + NGRAM - 1 for _, _, n in spans),
+                    len(files[a]), len(files[b]))
         if total >= min_words:
-            out.append((total, pair, spans))
+            out.append((total, (a, b), spans))
     out.sort(reverse=True)
     return out
 
@@ -121,8 +124,13 @@ def check_restatement(root, cfg):
     if not s.get('enable'):
         return []
     suffix = cfg.section('siblings').get('suffix', '-for-agents')
-    exempt = [(re.compile(a), re.compile(b))
-              for a, b in s.get('exempt-pairs', [])]
+    try:
+        exempt = [(re.compile(a), re.compile(b))
+                  for a, b in s.get('exempt-pairs', [])]
+    except (TypeError, ValueError, re.error) as e:
+        return [Finding('BAD CONFIG', 'factcheck.toml',
+                        f"[restatement] exempt-pairs must be a list of "
+                        f"[regex, regex] pairs: {e}")]
     files = {p.relative_to(root).as_posix(): words_of(p.read_text())
              for p in cfg.scope('docs')}
 
