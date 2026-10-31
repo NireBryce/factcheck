@@ -20,7 +20,8 @@ Config (`[lessons]`):
     [lessons]
     page = "docs/lessons-learned.md"           # required to enable
     dir = "docs/lessons-learned"               # default: page minus .md
-    exempt = ["0-human-README.md"]             # files in dir that aren't lessons
+    exempt = ["0-human-README.md"]             # files in dir that aren't lessons;
+                                               # setting it replaces this default
     fields = ["Home", "Enforced"]              # each entry must carry `<f>: `
     marker = "§"                               # the number's prefix
 
@@ -28,6 +29,7 @@ Generalized from the index half of the lessons check in the repo
 factcheck was extracted from; that repo keeps the other half (its
 lessons-map file) as its own plugin, registered as `lessons`.
 """
+import posixpath
 import re
 
 from ..findings import Finding
@@ -51,7 +53,7 @@ def check_lessons_index(root, cfg):
     if not page_rel:
         return []
     dir_rel = s.get('dir', page_rel[:-3] if page_rel.endswith('.md')
-                    else page_rel)
+                    else page_rel).rstrip('/')
     exempt = set(s.get('exempt', ['0-human-README.md']))
     fields = s.get('fields', ['Home', 'Enforced'])
     marker = s.get('marker', '§')
@@ -61,10 +63,11 @@ def check_lessons_index(root, cfg):
         return [Finding('MISSING LESSONS PAGE', page_rel,
                         '[lessons] page names no file')]
     # Links on the page are relative to it, so an entry's link starts with
-    # the article directory as seen from the page.
+    # the article directory as seen from the page (`../wiki/arts/` from
+    # `docs/`); a leading `./` on the link is ignored.
     page_parent = page_rel.rpartition('/')[0]
-    prefix = (dir_rel[len(page_parent) + 1:] if page_parent
-              and dir_rel.startswith(page_parent + '/') else dir_rel) + '/'
+    prefix = posixpath.relpath(dir_rel, page_parent or '.') + '/'
+    prefix = '' if prefix == './' else prefix
     start = f'- **{marker}'
     rx = entry_rx(marker)
 
@@ -78,6 +81,7 @@ def check_lessons_index(root, cfg):
             findings.append(Finding('MALFORMED LESSON', page_rel, line[:70]))
             continue
         n, link = int(m.group(1)), m.group(2)
+        link = link[2:] if link.startswith('./') else link
         if n in entries:
             findings.append(Finding(
                 'DUPLICATE LESSON', page_rel,
@@ -88,7 +92,7 @@ def check_lessons_index(root, cfg):
                 'LESSON LINK', page_rel,
                 f"{marker}{n} links {link}, not its own article"))
         for field in fields:
-            if f'{field}: ' not in line:
+            if not re.search(rf'(?<![\w-]){re.escape(field)}: ', line):
                 findings.append(Finding(
                     'LESSON FIELD', page_rel,
                     f"{marker}{n} has no `{field}:`"))
@@ -96,7 +100,7 @@ def check_lessons_index(root, cfg):
     articles = {}
     for p in sorted(art_dir.glob('*.md')) if art_dir.is_dir() else []:
         rel = p.relative_to(root).as_posix()
-        if p.name in exempt:
+        if p.name in exempt or p == page:
             continue
         m = ARTICLE.match(p.name)
         if not m:
