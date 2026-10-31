@@ -5,7 +5,17 @@
 # that DO follow those conventions.
 
 [scopes]
-docs = ["README.md", "plugins/example/*.py"]
+docs = ["README.md", "AGENTS.md", "plugins/example/*.py",
+        ".agents/skills/*/SKILL.md", ".github/pull_request_template.md"]
 
 [checks]
 disabled = ["contents", "dates", "siblings"]
+
+[skills]
+dirs = [".agents/skills"]
+
+# No guard hooks here, so no **Needs:** vocabulary and no guarded-command
+# cue (the defaults are the vocabulary of the repo factcheck came from).
+[skill-files]
+needs-tags = []
+needs-cue = ""
