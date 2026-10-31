@@ -54,6 +54,7 @@ pipx install git+https://github.com/NireBryce/factcheck
 ./bin/factcheck check              # every registered check, against cwd
 ./bin/factcheck links --root .    # one check
 ./bin/factcheck checks            # what's registered
+./bin/factcheck links --help          # one command's usage and what it does
 ./bin/factcheck fix-contents PAGE.md   # a fixer, not a check
 ./bin/factcheck fix-generated PAGE.md  # rewrite generated regions from their sources
 ./bin/factcheck fix-refs dry-run        # after `git mv`: what references it would rewrite

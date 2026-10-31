@@ -15,6 +15,15 @@ from pathlib import Path
 from . import capabilities, checks, config, fixers, plugins, registry
 from .findings import see_lines
 
+# Commands the ancestor tool had under another name. A user (or a doc)
+# reaching for the old verb gets the new one, not "unknown command".
+RENAMED = {
+    'gen-contents': (
+        "`gen-contents` is now `factcheck fix-contents <page.md...>`: it "
+        "takes the pages to rewrite. There is deliberately no whole-tree "
+        "form, which would add Contents blocks to pages exempt from them."),
+}
+
 USAGE = """\
 usage: factcheck [global options] [command]
 
@@ -25,6 +34,8 @@ commands:
   fix-contents <f...>  rewrite pages' Contents blocks (a fixer, not a check)
   fix-refs apply|dry-run [OLD=NEW...]
                        rewrite references to paths moved with `git mv`
+  fix-generated <f...> rewrite generated regions from their sources
+  <command> --help     that command's usage and what it does
 
 global options:
   --root PATH          repository to check (default: cwd)
@@ -91,6 +102,43 @@ def _run_checks(cmd, root, cfg, skip, out):
     return 1 if hard else 0
 
 
+def _summary(name, fn):
+    """What a check or fixer is, on one line: its module docstring's first
+    paragraph when that opens with `<name>:` (how the modules introduce
+    themselves), else the function's own docstring's."""
+    import inspect
+
+    def first(doc):
+        return ' '.join((doc or '').split('\n\n')[0].split())
+    mod = first(inspect.getdoc(inspect.getmodule(fn)))
+    return mod if mod.startswith(f'{name}:') else first(inspect.getdoc(fn))
+
+
+def _help(cmd, out):
+    """`factcheck <command> --help`: that command's usage and summary;
+    with no command, the general usage."""
+    if cmd is None:
+        out.write(USAGE)
+        return 0
+    if cmd in RENAMED:
+        out.write(RENAMED[cmd] + '\n')
+        return 0
+    if cmd in fixers.FIXERS:
+        out.write(fixers.USAGE.get(
+            cmd, f"usage: factcheck {cmd} <file.md> [file.md ...]\n"))
+        out.write(_summary(cmd, fixers.FIXERS[cmd]) + '\n')
+        return 0
+    if cmd in registry.CHECKS:
+        out.write(f"usage: factcheck [global options] {cmd} [repo-root]\n")
+        out.write(_summary(cmd, registry.CHECKS[cmd].fn) + '\n')
+        return 0
+    if cmd in ('check', 'checks'):
+        out.write(USAGE)
+        return 0
+    out.write(f"unknown command {cmd!r} -- try `factcheck checks`\n")
+    return 2
+
+
 def main(argv=None, out=None):
     out = out or sys.stdout
     argv = sys.argv[1:] if argv is None else argv
@@ -98,11 +146,12 @@ def main(argv=None, out=None):
     skip = set()
     positional = []
     i = 0
+    want_help = False
     while i < len(argv):
         a = argv[i]
         if a in ('-h', '--help'):
-            out.write(USAGE)
-            return 0
+            want_help = True
+            i += 1
         elif a == '--root':
             root_override = argv[i + 1]
             i += 2
@@ -125,7 +174,12 @@ def main(argv=None, out=None):
             positional.append(a)
             i += 1
 
+    if want_help:
+        return _help(positional[0] if positional else None, out)
     cmd = positional[0] if positional else 'check'
+    if cmd in RENAMED:
+        out.write(RENAMED[cmd] + '\n')
+        return 2
     # A check command takes an optional positional repo-root --
     # `factcheck siblings /path/to/repo`, the shape hooks and scripts
     # call with. It must never be silently dropped: a root that stays
