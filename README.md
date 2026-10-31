@@ -149,15 +149,15 @@ real one. A fixer registers through `factcheck.fixers` and never joins
 ## Provenance: parity with check_docs.py
 
 factcheck generalizes a checker (`check_docs.py`) that lived inside the
-NixOS repo it checked. Since that repo will adopt this tool, every check
-there has a declared home here -- none may silently disappear at the
-switch:
+NixOS repo it checked. That repo adopted this tool on 2026-10-30, and
+every check it had was given a declared home, so none could silently
+disappear at the switch:
 
 | check_docs.py check | home |
 |---|---|
 | links, anchors, contents + gen-contents, dates, siblings, recipes, skills, docrefs, counts, skill-files, rules, summaries, generated | **factcheck core now** |
 | lessons (index half) | **factcheck core** as `lessons-index`, since it stopped being repo-specific (an example plugin until then) |
-| imports/table (+ the static tree reading), secrets, routes, generated region instances | **example plugins in `examples/nixos-plugins/`** -- at flip time they move into that repo and its config |
+| imports/table (+ the static tree reading), secrets, routes, generated region instances | **plugins in that repo** (its `tools/docchecks/`, wired by its own `factcheck.toml`) since the switch; `examples/nixos-plugins/` keeps the copies they started from, as worked examples, and may lag the live ones |
 | lessons (the lessons-map half) | **stays repo-carried, deliberately**: the map's glob semantics is a single shared module three readers there import so they cannot disagree; an example copy here would be exactly the duplicate the contract exists to prevent |
 
 Verified: on a copy of that repo, factcheck and check_docs.py produce
@@ -187,11 +187,17 @@ docs domain is already public on its own site.
 ## Development
 
 ```sh
-python3 -m unittest discover -s tests -t .
-python3 -m factcheck check   # self-check (factcheck.toml scopes it)
+scripts/check   # the tests, the registry listing, and the self-check
 ```
 
-CI runs both on Python 3.11, 3.13 and 3.14. No dependencies; no install.
+CI runs exactly that script on Python 3.11, 3.13 and 3.14, plus a check
+that a PR's commits carry the canonical agent trailer. No dependencies;
+no install. `git config core.hooksPath .githooks` wires the local hooks
+(trailer fix-up at commit, `scripts/check` before push).
+
+Agents working here start at [AGENTS.md](AGENTS.md) (`CLAUDE.md` is a
+symlink to it); the procedures for landing a change, reviewing one, and
+writing docs that stay true are skills under `.agents/skills/`.
 
 ## License
 

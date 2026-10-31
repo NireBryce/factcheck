@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# The one checklist: what CI runs (.github/workflows/ci.yml calls this
+# script, not a copy of its steps) and what .githooks/pre-push runs. A
+# step added here gates every PR with no second edit.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+python3 -m unittest discover -s tests -t .
+python3 -m factcheck checks
+python3 -m factcheck check
