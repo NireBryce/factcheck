@@ -37,7 +37,7 @@ dirs = [".agents/skills"]
 moved-dirs = { ".claude/hooks" = ".agents/hooks" }
 
 # The fleet's plugins: the static tree reader, the membership checks
-# built on it, the two set-claim checks, the lessons index, and the
+# built on it, the two set-claim checks, and the
 # generated regions. Absolute paths because these live in this repo
 # until the flip; they move into nixos-configs' own plugins/ then.
 # Everything fleet-specific in their OUTPUT (host names, routes) comes
@@ -48,7 +48,6 @@ load = [
   "/home/elly/projects/agents/factcheck/examples/nixos-plugins/imports_table.py",
   "/home/elly/projects/agents/factcheck/examples/nixos-plugins/secrets.py",
   "/home/elly/projects/agents/factcheck/examples/nixos-plugins/routes.py",
-  "/home/elly/projects/agents/factcheck/examples/nixos-plugins/lessons_index.py",
   "/home/elly/projects/agents/factcheck/examples/nixos-plugins/nixos_regions.py",
 ]
 
@@ -78,6 +77,7 @@ sources = ["flake/modules/homelab-config/homelab/reverse-proxy/caddy/caddy.nix",
            "wiki/config-structure/categories/reverse-proxy-history.md"]
 base-domain = "ts-cube.moose-micro.ts.net"
 
+# Read by the built-in `lessons-index` check (once an example plugin).
 [lessons]
 page = "wiki/agent-lessons-learned.md"
 dir = "wiki/agent-lessons-learned"

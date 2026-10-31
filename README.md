@@ -90,6 +90,7 @@ load = ["plugins/my-checks.py"]
 | `skill-files` | the skill files themselves: the four lookups re-applied to skill prose (backticked-anywhere, bare-in-fences `just` mentions; skill mentions; relative links; repo-rooted backtick paths), plus SKILL.md-only rules — frontmatter `name` matching its directory, a one-sentence description with no repo paths, `when_to_use` under the harness listing cap, plain-YAML-safe values, unknown frontmatter keys, the `**Needs:**` tag vocabulary, and a ban on ` ```! ` / `!`backtick`` ` injection syntax | `[skills] dirs`, `[recipes] justfile`, `[skill-files]` keys/caps/prefixes/needs |
 | `docrefs` | cross-references the narrower checks miss: `just <module> <helper>` naming no recipe in that just module; a `<skills-dir>/<name>` path or an unquoted hyphenated skill mention naming no skill directory; backticked paths under directories that moved (a config data table); a sentence naming one markdown page plus a quoted "…section" the page doesn't have; and BARE COUNT — a number from three up directly before a countable noun, unless the sentence names that many items, ends in a colon, carries a date or "as of", or opts out with `<!-- count-ok: reason -->` | scope `docs` + skills, `[docrefs] agent-module, moved-dirs, count-nouns, exempt` |
 | `counts` | prose count claims — "all five hosts", "all three nixos hosts", "two of the three nixos hosts" — against actual counts | scope `docs`, `[counts] noun, classes, source, counters`, counters from plugins |
+| `lessons-index` | a numbered lessons index stays whole: one `- **§N**` entry per lesson, linking its own `N-slug.md` article and stating the rule, each carrying the required fields (default `Home:` and `Enforced:`), an article for every number, no gaps from 1 to the top. Opt-in: off until `page` is set | `[lessons] page, dir, exempt` (replaces the default `0-human-README.md`), `fields, marker` | <!-- path-ok: example names -->
 | `rules` | path-scoped rule files: frontmatter is exactly a non-empty `paths:` list of quoted globs, every glob matches a git-tracked file, and the pointer doc names each rule | `[rules] dir, pointer` |
 | `summaries` | every tracked file under a directory carries a marker line (default: `# package summary:` on package modules) | `[summaries] dir, suffix, marker, tag, exclude-*` |
 | `generated` | every registered generated region exists on its home page and renders exactly what its source produces today; hand-written columns are carried per row, and a new row's empty hand cell is a finding until filled | regions registered by plugins |
@@ -149,14 +150,15 @@ real one. A fixer registers through `factcheck.fixers` and never joins
 ## Provenance: parity with check_docs.py
 
 factcheck generalizes a checker (`check_docs.py`) that lived inside the <!-- path-ok: the ancestor checker, in another repo -->
-NixOS repo it checked. Since that repo will adopt this tool, every check
-there has a declared home here -- none may silently disappear at the
-switch:
+NixOS repo it checked. That repo adopted this tool on 2026-10-30, and
+every check it had was given a declared home, so none could silently
+disappear at the switch:
 
 | check_docs.py check | home |
 |---|---|
 | links, anchors, contents + gen-contents, dates, siblings, recipes, skills, docrefs, counts, skill-files, rules, summaries, generated | **factcheck core now** |
-| imports/table (+ the static tree reading), secrets, routes, lessons (index half), generated region instances | **example plugins in `examples/nixos-plugins/`** -- at flip time they move into that repo and its config |
+| lessons (index half) | **factcheck core** as `lessons-index`, since it stopped being repo-specific (an example plugin until then) |
+| imports/table (+ the static tree reading), secrets, routes, generated region instances | **plugins in that repo** (its `tools/docchecks/`, wired by its own `factcheck.toml`) since the switch; `examples/nixos-plugins/` keeps the copies they started from, as worked examples, and may lag the live ones |
 | lessons (the lessons-map half) | **stays repo-carried, deliberately**: the map's glob semantics is a single shared module three readers there import so they cannot disagree; an example copy here would be exactly the duplicate the contract exists to prevent |
 
 Verified: on a copy of that repo, factcheck and check_docs.py produce
@@ -186,11 +188,17 @@ docs domain is already public on its own site.
 ## Development
 
 ```sh
-python3 -m unittest discover -s tests -t .
-python3 -m factcheck check   # self-check (factcheck.toml scopes it)
+scripts/check   # the tests, the registry listing, and the self-check
 ```
 
-CI runs both on Python 3.11, 3.13 and 3.14. No dependencies; no install.
+CI runs exactly that script on Python 3.11, 3.13 and 3.14, plus a check
+that a PR's commits carry the canonical agent trailer. No dependencies;
+no install. `git config core.hooksPath .githooks` wires the local hooks
+(trailer fix-up at commit, `scripts/check` before push).
+
+Agents working here start at [AGENTS.md](AGENTS.md) (`CLAUDE.md` is a
+symlink to it); the procedures for landing a change, reviewing one, and
+writing docs that stay true are skills under `.agents/skills/`.
 
 ## License
 
