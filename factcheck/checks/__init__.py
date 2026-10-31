@@ -2,4 +2,4 @@
 `@check`; importing this package registers all of them."""
 from . import (  # noqa: F401
     anchors, contents, counts, dates, docrefs, fixrefs, generated, lessons,
-    links, recipes, rules, siblings, skillfiles, skills, summaries)
+    links, paths, recipes, rules, siblings, skillfiles, skills, summaries)

@@ -86,12 +86,13 @@ load = ["plugins/my-checks.py"]
 | `fix-refs` | *fixer*: after `git mv`, rewrites references to the moved paths in every tracked text file -- markdown links (re-relativised from the linking file's new location), reference definitions, and bare repo paths in prose, code and scripts; whole-directory moves are inferred. Paths a program builds from pieces, and depth-sensitive code in moved scripts, print as `REVIEW` lines instead. `factcheck fix-refs dry-run` lists what would change | `[fix-refs] exclude`; extra moves as `OLD=NEW` arguments |
 | `dates` | the `_Last modified: YYYY-MM-DD_` line exists right after the title, in exactly the configured shape, and isn't in the future | scope `pages`, `[dates] line` |
 | `siblings` | the `<page>-for-agents.md` pairing: no orphans, long sources have a sibling (or a folded `## Quick facts` section), the sibling isn't older than its source unless a dated reviewed-line says why, word budget (REVIEW only), back-links both ways | scope `pages`, `[siblings] suffix, required-words, budget, fold-heading, exempt` |
+| `paths` | backticked filenames in the docs that name no git-tracked file, matched by suffix (`checks/links.py` finds `factcheck/checks/links.py`) after dropping `./`/`../`. REVIEW only: historical names kept to explain a rename are a legitimate reason a mention won't resolve. Opt-in; a line with `<!-- path-ok: reason -->` is skipped | scope `docs`, `[paths] enable, exts, ignore` |
 | `recipes` | every backtick `` `just <recipe>` `` mention names a real recipe (handles `just key=value <recipe>` overrides and `mod` module names) | scope `docs`, `[recipes] justfile` |
 | `skills` | every "skill X" / "X skill" mention names a real skill directory | scope `docs`, `[skills] dirs` |
 | `skill-files` | the skill files themselves: the four lookups re-applied to skill prose (backticked-anywhere, bare-in-fences `just` mentions; skill mentions; relative links; repo-rooted backtick paths), plus SKILL.md-only rules — frontmatter `name` matching its directory, a one-sentence description with no repo paths, `when_to_use` under the harness listing cap, plain-YAML-safe values, unknown frontmatter keys, the `**Needs:**` tag vocabulary, and a ban on ` ```! ` / `!`backtick`` ` injection syntax | `[skills] dirs`, `[recipes] justfile`, `[skill-files]` keys/caps/prefixes/needs |
 | `docrefs` | cross-references the narrower checks miss: `just <module> <helper>` naming no recipe in that just module; a `<skills-dir>/<name>` path or an unquoted hyphenated skill mention naming no skill directory; backticked paths under directories that moved (a config data table); a sentence naming one markdown page plus a quoted "…section" the page doesn't have; and BARE COUNT — a number from three up directly before a countable noun, unless the sentence names that many items, ends in a colon, carries a date or "as of", or opts out with `<!-- count-ok: reason -->` | scope `docs` + skills, `[docrefs] agent-module, moved-dirs, count-nouns, exempt` |
 | `counts` | prose count claims — "all five hosts", "all three nixos hosts", "two of the three nixos hosts" — against actual counts | scope `docs`, `[counts] noun, classes, source, counters`, counters from plugins |
-| `lessons-index` | a numbered lessons index stays whole: one `- **§N**` entry per lesson, linking its own `N-slug.md` article and stating the rule, each carrying the required fields (default `Home:` and `Enforced:`), an article for every number, no gaps from 1 to the top. Opt-in: off until `page` is set | `[lessons] page, dir, exempt` (replaces the default `0-human-README.md`), `fields, marker` |
+| `lessons-index` | a numbered lessons index stays whole: one `- **§N**` entry per lesson, linking its own `N-slug.md` article and stating the rule, each carrying the required fields (default `Home:` and `Enforced:`), an article for every number, no gaps from 1 to the top. Opt-in: off until `page` is set | `[lessons] page, dir, exempt` (replaces the default `0-human-README.md`), `fields, marker` | <!-- path-ok: example names -->
 | `rules` | path-scoped rule files: frontmatter is exactly a non-empty `paths:` list of quoted globs, every glob matches a git-tracked file, and the pointer doc names each rule | `[rules] dir, pointer` |
 | `summaries` | every tracked file under a directory carries a marker line (default: `# package summary:` on package modules) | `[summaries] dir, suffix, marker, tag, exclude-*` |
 | `generated` | every registered generated region exists on its home page and renders exactly what its source produces today; hand-written columns are carried per row, and a new row's empty hand cell is a finding until filled | regions registered by plugins |
@@ -150,7 +151,7 @@ real one. A fixer registers through `factcheck.fixers` and never joins
 
 ## Provenance: parity with check_docs.py
 
-factcheck generalizes a checker (`check_docs.py`) that lived inside the
+factcheck generalizes a checker (`check_docs.py`) that lived inside the <!-- path-ok: the ancestor checker, in another repo -->
 NixOS repo it checked. That repo adopted this tool on 2026-10-30, and
 every check it had was given a declared home, so none could silently
 disappear at the switch:
@@ -180,7 +181,7 @@ docs domain is already public on its own site.
   The ancestor's scripts once carried six ideas of what a fence is; one
   was defined twice in one file and the later one silently won.
 - **Slugs are GitHub's, reverse-engineered**, not assumed: punctuation
-  disappears with nothing in its place (`` `VMs/_lib/x.nix` `` slugs to
+  disappears with nothing in its place (`` `VMs/_lib/x.nix` `` slugs to <!-- path-ok: a slug example -->
   `vms_libxnix`-shaped strings), and repeated headings get `-1` counters
   fed by every heading in document order, not just the ones you want.
 - **A clean run proves nothing.** Every check lands with a fixture test

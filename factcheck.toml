@@ -19,3 +19,6 @@ dirs = [".agents/skills"]
 [skill-files]
 needs-tags = []
 needs-cue = ""
+
+[paths]
+enable = true
