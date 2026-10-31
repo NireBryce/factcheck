@@ -9,3 +9,6 @@ docs = ["README.md", "plugins/example/*.py"]
 
 [checks]
 disabled = ["contents", "dates", "siblings"]
+
+[paths]
+enable = true

@@ -84,6 +84,7 @@ load = ["plugins/my-checks.py"]
 | `fix-contents` | *fixer*: rewrites a Contents block in place; replaces only the bullet run, never the surrounding prose | — |
 | `dates` | the `_Last modified: YYYY-MM-DD_` line exists right after the title, in exactly the configured shape, and isn't in the future | scope `pages`, `[dates] line` |
 | `siblings` | the `<page>-for-agents.md` pairing: no orphans, long sources have a sibling (or a folded `## Quick facts` section), the sibling isn't older than its source unless a dated reviewed-line says why, word budget (REVIEW only), back-links both ways | scope `pages`, `[siblings] suffix, required-words, budget, fold-heading, exempt` |
+| `paths` | backticked filenames in the docs that name no git-tracked file, matched by suffix (`checks/links.py` finds `factcheck/checks/links.py`) after dropping `./`/`../`. REVIEW only: historical names kept to explain a rename are a legitimate reason a mention won't resolve. Opt-in; a line with `<!-- path-ok: reason -->` is skipped | scope `docs`, `[paths] enable, exts, ignore` |
 | `recipes` | every backtick `` `just <recipe>` `` mention names a real recipe (handles `just key=value <recipe>` overrides and `mod` module names) | scope `docs`, `[recipes] justfile` |
 | `skills` | every "skill X" / "X skill" mention names a real skill directory | scope `docs`, `[skills] dirs` |
 | `skill-files` | the skill files themselves: the four lookups re-applied to skill prose (backticked-anywhere, bare-in-fences `just` mentions; skill mentions; relative links; repo-rooted backtick paths), plus SKILL.md-only rules — frontmatter `name` matching its directory, a one-sentence description with no repo paths, `when_to_use` under the harness listing cap, plain-YAML-safe values, unknown frontmatter keys, the `**Needs:**` tag vocabulary, and a ban on ` ```! ` / `!`backtick`` ` injection syntax | `[skills] dirs`, `[recipes] justfile`, `[skill-files]` keys/caps/prefixes/needs |
@@ -147,7 +148,7 @@ real one. A fixer registers through `factcheck.fixers` and never joins
 
 ## Provenance: parity with check_docs.py
 
-factcheck generalizes a checker (`check_docs.py`) that lived inside the
+factcheck generalizes a checker (`check_docs.py`) that lived inside the <!-- path-ok: the ancestor checker, in another repo -->
 NixOS repo it checked. Since that repo will adopt this tool, every check
 there has a declared home here -- none may silently disappear at the
 switch:
@@ -176,7 +177,7 @@ docs domain is already public on its own site.
   The ancestor's scripts once carried six ideas of what a fence is; one
   was defined twice in one file and the later one silently won.
 - **Slugs are GitHub's, reverse-engineered**, not assumed: punctuation
-  disappears with nothing in its place (`` `VMs/_lib/x.nix` `` slugs to
+  disappears with nothing in its place (`` `VMs/_lib/x.nix` `` slugs to <!-- path-ok: a slug example -->
   `vms_libxnix`-shaped strings), and repeated headings get `-1` counters
   fed by every heading in document order, not just the ones you want.
 - **A clean run proves nothing.** Every check lands with a fixture test
