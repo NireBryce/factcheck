@@ -36,7 +36,7 @@ import re
 import subprocess
 
 from ..findings import Finding
-from ..gitfiles import tracked_files
+from ..gitfiles import NotAGitCheckout, tracked_files
 from ..mdcore import fences
 from ..registry import check
 
@@ -89,7 +89,7 @@ def check_paths(root, cfg):
     ignore = [re.compile(p) for p in s.get('ignore', [])]
     try:
         tracked = set(tracked_files(root))
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except NotAGitCheckout:
         return [Finding('PATHS NEEDS GIT', str(root),
                         "not a git checkout: `paths` reads git-tracked files",
                         review=True)]

@@ -125,7 +125,10 @@ factcheck was extracted from -- every one overridable, none load-bearing.
 A finding prints as one line, `TAG  path: message`. Findings a heuristic
 can't be sure about are marked `REVIEW` and never fail a run on their own
 (the run says so explicitly rather than passing silently); everything else
-is hard and exits 1. Exit 2 means usage error. After the findings, one
+is hard and exits 1. Exit 2 means a usage error (an unknown flag or
+command, a root that isn't a directory), or a check that reads git-tracked
+files could not run because the root isn't inside a git checkout; it says
+which, never with a traceback. After the findings, one
 `-> TAG: see <advice>` line per kind points at the fix.
 
 `--skip=a,b` leaves named checks out of `check` and says so in the output;
