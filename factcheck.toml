@@ -7,6 +7,10 @@
 [scopes]
 docs = ["README.md", "AGENTS.md", "plugins/example/*.py",
         ".agents/skills/*/SKILL.md", ".github/pull_request_template.md"]
+# The pages that carry page conventions or generated regions: the
+# README (its checks table is generated) and the agent docs, so docrefs'
+# page-section references resolve against them too.
+pages = ["README.md", "AGENTS.md", ".agents/skills/*/SKILL.md"]
 
 [checks]
 disabled = ["contents", "dates", "siblings"]
@@ -22,3 +26,8 @@ needs-cue = ""
 
 [paths]
 enable = true
+
+# This repo's own region: the README checks table, rendered from the
+# registry (plugins/readme_checks_table.py).
+[plugins]
+load = ["plugins/readme_checks_table.py"]

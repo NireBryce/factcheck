@@ -17,8 +17,8 @@ hand text is reported on the write run so nothing vanishes silently.
 
 Region definitions come from the `REGIONS` registry here: core ships the
 engine, plugins ship the regions (they encode the repo's own facts --
-roster files, module trees). The `generated` check wraps `run`; a writer
-CLI can call it with `write=True`.
+roster files, module trees). The `generated` check wraps `run`; the
+`fix-generated` fixer is the write half, calling it with `write=True`.
 """
 import re
 
