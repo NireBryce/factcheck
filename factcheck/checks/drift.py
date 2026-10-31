@@ -2,7 +2,8 @@
 
 Answers "where should an accuracy audit start", and nothing more: for
 each doc in the docs scope, take its date (the `dates` check's
-last-modified line, else the file's last commit date), collect the repo
+last-modified line, looked for in the first six lines; else, or when it
+isn't a real date, the file's last commit date), collect the repo
 paths it cites (backticked tokens and markdown-link targets that resolve
 to tracked files or directories), and count the commits that touched
 those paths strictly after that date. Markdown files are not counted as
@@ -21,7 +22,10 @@ docs with at least `min-commits` are reported, most first. Opt-in:
     min-commits = 1      # below this, a doc isn't reported
     min-dir-depth = 3    # cited directories shallower than this are ignored
 
-Needs git; one `git log --name-only` pass for the whole repo.
+Needs git with full history: outside a checkout, or in a shallow clone
+(CI's default checkout), it reports that once instead of a silent or
+truncated count. One `git log --name-only` pass for the whole repo. A
+commit on the doc's own date isn't counted, since dates have no time.
 
 Generalized from the doc_drift.py and docscope.py helpers of the repo
 factcheck was extracted from, where it ranked the docs for a whole-repo
@@ -44,8 +48,11 @@ SEE = ("commits under the paths a doc cites since its date: read the doc "
 
 
 def _git(root, *args):
+    # quotepath off: a non-ASCII path would otherwise come back as an
+    # octal escape that matches no cited token.
     p = subprocess.run(["git", "-C", str(root), "-c", "core.fsmonitor=false",
-                        *args], capture_output=True, text=True)
+                        "-c", "core.quotepath=off", *args],
+                       capture_output=True, text=True)
     return p.stdout if p.returncode == 0 else ""
 
 
@@ -95,12 +102,14 @@ def cited(text, index):
 
 def change_log(root):
     """{path: {(date, sha)}} for every non-markdown file ever touched."""
-    out = _git(root, "log", "--format=@%H %cs", "--name-only",
+    # A NUL marks a commit line: no path can start with one, unlike the
+    # `@` that a tracked `@scope/pkg/` path would be mistaken for.
+    out = _git(root, "log", "--format=%x00%H %cs", "--name-only",
                "--no-renames")
     hist = defaultdict(set)
     sha = date = None
     for line in out.splitlines():
-        if line.startswith("@"):
+        if line.startswith("\0"):
             sha, date = line[1:].split()
         elif line and sha and not line.endswith(".md"):
             hist[line].add((date, sha))
@@ -123,7 +132,10 @@ def rank(root, cfg):
     for path in cfg.scope('docs'):
         rel = path.relative_to(root).as_posix()
         text = path.read_text(errors="replace")
-        d = dates.last_modified(text, date_rx)
+        try:
+            d = dates.last_modified(text, date_rx)
+        except ValueError:   # a date-shaped line that isn't a real date
+            d = None
         date = d.isoformat() if d else _git(
             root, "log", "-1", "--format=%cs", "--", rel).strip()
         if not date:
@@ -150,6 +162,17 @@ def check_drift(root, cfg):
     s = cfg.section('drift')
     if not s.get('enable'):
         return []
+    # Silence here would read as "nothing drifted": say why instead.
+    shallow = _git(root, "rev-parse", "--is-shallow-repository").strip()
+    if shallow not in ("true", "false"):
+        return [Finding('DRIFT NEEDS GIT', str(root),
+                        "not a git checkout: `drift` reads commit history",
+                        review=True)]
+    if shallow == "true":
+        return [Finding('DRIFT NEEDS HISTORY', str(root),
+                        "shallow clone: commit counts would be truncated "
+                        "(fetch full history, e.g. actions/checkout with "
+                        "fetch-depth: 0)", review=True)]
     top, floor = s.get('top', 10), s.get('min-commits', 1)
     findings = []
     for r in [r for r in rank(root, cfg) if r["commits"] >= floor][:top]:

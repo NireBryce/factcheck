@@ -85,9 +85,53 @@ class Drift(Tree):
         f = self.findings()
         self.assertIn('since 2026-01-05', f[0].message)
 
+    def test_a_cited_directory_counts_changes_beneath_it(self):
+        self.commit('2026-01-01', 'src/app/mod/x.py')
+        self.write('docs/e.md', '# E\n\n_Last modified: 2026-01-02_\n\n'
+                   'Everything under `src/app/mod/`.\n')
+        self.commit('2026-01-02')
+        self.commit('2026-02-01', 'src/app/mod/deep/y.py')
+        f = self.findings()
+        self.assertIn('src/app/mod (1)', f[0].message)
+
+    def test_at_sign_path_does_not_break_the_log_parser(self):
+        self.commit('2026-01-01', '@scope/pkg/i.js', 'src/a/x.py')
+        self.write('docs/f.md', '# F\n\n_Last modified: 2026-01-02_\n\n'
+                   '`src/a/x.py`\n')
+        self.commit('2026-01-02')
+        self.commit('2026-02-01', 'src/a/x.py', '@scope/pkg/i.js')
+        self.assertEqual(len(self.findings()), 1)
+
+    def test_impossible_date_falls_back_to_git(self):
+        self.commit('2026-01-01', 'src/a/x.py')
+        self.write('docs/g.md', '# G\n\n_Last modified: 2026-02-30_\n\n'
+                   '`src/a/x.py`\n')
+        self.commit('2026-01-05')
+        self.commit('2026-02-01', 'src/a/x.py')
+        self.assertIn('since 2026-01-05', self.findings()[0].message)
+
+    def test_shallow_clone_is_reported_not_undercounted(self):
+        self.commit('2026-01-01', 'src/a/x.py')
+        self.commit('2026-01-02', 'src/a/x.py')
+        clone = self.root.parent / (self.root.name + '-shallow')
+        subprocess.run(['git', 'clone', '-q', '--depth', '1',
+                        f'file://{self.root}', str(clone)], check=True,
+                       env=self.env, capture_output=True)
+        self.addCleanup(__import__('shutil').rmtree, clone, True)
+        f = drift.check_drift(clone, self.cfg(ON).__class__(clone, ON))
+        self.assertEqual([x.tag for x in f], ['DRIFT NEEDS HISTORY'])
+
     def test_off_unless_enabled(self):
         self.commit('2026-01-01', 'src/a/x.py')
         self.write('docs/d.md', '# D\n\n`src/a/x.py`\n')
         self.commit('2026-01-05')
         self.commit('2026-02-01', 'src/a/x.py')
         self.assertEqual(self.findings({'scopes': ON['scopes']}), [])
+
+
+class NotARepo(Tree):
+    def test_reported_once(self):
+        self.write('docs/a.md', '`src/a/x.py`\n')
+        f = drift.check_drift(self.root, self.cfg(ON))
+        self.assertEqual([(x.tag, x.review) for x in f],
+                         [('DRIFT NEEDS GIT', True)])
