@@ -1,8 +1,7 @@
 """The suite run from inside a git hook leaves the hook's repo alone.
-The case this guards: pre-push exports GIT_DIR, and the fix-refs and rules
+A hook exports GIT_DIR and friends; with them set, the fix-refs and rules
 fixtures (`git init`, `git config user.*`, `git commit` in a temp dir)
-wrote their identity into a real repo's config and their commits onto
-its branch."""
+still leave that repo's config, branches and index unchanged."""
 import os
 import subprocess
 import sys
