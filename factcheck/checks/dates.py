@@ -26,13 +26,23 @@ def line_regex(cfg):
                       + r'\s*$')
 
 
+def parse_date(text):
+    """A YYYY-MM-DD string as a date, or None when it names no real day
+    (`2026-02-30`): the line regex accepts the shape, not the calendar."""
+    try:
+        return datetime.date.fromisoformat(text)
+    except ValueError:
+        return None
+
+
 def last_modified(text, rx):
-    """The page's date, or None. `check_dates` is what reports a page
-    missing the line at all; this just can't compare without it."""
+    """The page's date, or None -- for a page without the line, or one
+    whose date isn't a real day. `check_dates` is what reports either;
+    this just can't compare without a date."""
     for line in text.splitlines()[:6]:
         m = rx.match(line)
         if m:
-            return datetime.date.fromisoformat(m.group(1))
+            return parse_date(m.group(1))
     return None
 
 
@@ -58,7 +68,13 @@ def check_dates(root, cfg):
                 f"no `{DEFAULT_LINE.format(date='YYYY-MM-DD')}` line right "
                 f"after the title"))
             continue
-        date = datetime.date.fromisoformat(m.group(1))
+        date = parse_date(m.group(1))
+        if date is None:
+            findings.append(Finding(
+                'INVALID DATE', str(path),
+                f"Last modified says {m.group(1)}, which is not a real "
+                f"date"))
+            continue
         if date > today:
             findings.append(Finding(
                 'FUTURE DATE', str(path),

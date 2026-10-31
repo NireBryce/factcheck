@@ -79,6 +79,17 @@ class Siblings(Tree):
         self.assertEqual(sorted(x.tag for x in f),
                          ['FUTURE REVIEW', 'STALE SIBLING'])
 
+    def test_impossible_page_date_does_not_crash(self):
+        self.write_pair('2026-02-30', OLDER)
+        self.assertEqual(self.findings(), [])   # `dates` reports the line
+
+    def test_impossible_review_date_is_a_finding_and_excuses_nothing(self):
+        self.write_pair(OLD, OLDER,
+                        sib_text=sib_page(OLDER, reviewed='2026-02-30'))
+        f = self.findings()
+        self.assertEqual(sorted(x.tag for x in f),
+                         ['INVALID REVIEW DATE', 'STALE SIBLING'])
+
     def test_orphan_sibling(self):
         self.write('wiki/lost-for-agents.md', page(OLD, 'x'))
         f = self.findings()
