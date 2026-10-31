@@ -56,7 +56,10 @@ USAGE = "usage: factcheck fix-refs apply|dry-run [OLD=NEW ...]\n"
 
 
 def git(root, *args):
-    return subprocess.run(["git", "-C", root, *args], check=True,
+    # quotepath off: otherwise git prints a non-ASCII path as a quoted
+    # octal escape, which then matches nothing and is silently skipped.
+    return subprocess.run(["git", "-C", root, "-c", "core.quotepath=off",
+                           *args], check=True,
                           capture_output=True, text=True).stdout
 
 
@@ -192,8 +195,26 @@ def fix_refs(root, cfg, args):
         return 2
     dry_run = mode == 'dry-run'
     exclude = cfg.section('fix-refs').get('exclude', [])
-    root = os.path.abspath(str(root))
+    try:
+        # The repo's top level, not the cwd: from a subdirectory, git
+        # would list paths relative to it.
+        root = git(str(root), "rev-parse", "--show-toplevel").strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(f"fix-refs: {root} is not inside a git repository")
+        return 2
+    if subprocess.run(["git", "-C", root, "rev-parse", "--verify", "-q",
+                       "HEAD"], capture_output=True).returncode != 0:
+        print("fix-refs: needs at least one commit (renames are read "
+              "against HEAD)")
+        return 2
+    try:
+        return _fix_refs(root, exclude, pairs, dry_run)
+    except subprocess.CalledProcessError as e:
+        print(f"fix-refs: git failed: {(e.stderr or '').strip()}")
+        return 2
 
+
+def _fix_refs(root, exclude, pairs, dry_run):
     ren = staged_renames(root)
     for pair in pairs:
         o, _, n = pair.partition("=")

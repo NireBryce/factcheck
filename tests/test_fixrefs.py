@@ -204,6 +204,31 @@ class DryRunAndReview(Repo):
         self.assertEqual(self.read("vendor/a.md"), "[b](../wiki/b.md)\n")
 
 
+class GitEdges(Repo):
+    def test_non_ascii_paths_are_rewritten(self):
+        self.write("my docs/é.md", "e\n")
+        self.write("README.md", "[e](my%20docs/é.md) and `my docs/é.md`\n")
+        self.commit_all()
+        self.move("my docs/é.md", "my docs/ü.md")
+        out = self.run_tool()
+        self.assertIn("rewrote 1 file", out)
+        self.assertIn("`my docs/ü.md`", self.read("README.md"))
+
+    def test_no_commits_yet_is_an_error_not_a_traceback(self):
+        self.write("a.md", "a\n")
+        self.git("add", "-A")
+        rc, out = self.fixer("apply", "a.md=b.md")
+        self.assertEqual(rc, 2)
+        self.assertIn("needs at least one commit", out)
+
+    def test_not_a_repo_is_an_error(self):
+        import tempfile as tf
+        with tf.TemporaryDirectory() as d:
+            rc = fixrefs.fix_refs(pathlib.Path(d),
+                                  Config(pathlib.Path(d), {}), ["apply"])
+            self.assertEqual(rc, 2)
+
+
 class Cli(Repo):
     def test_exit_status_and_usage_reach_the_cli(self):
         import io
@@ -215,6 +240,20 @@ class Cli(Repo):
         self.assertIn("apply|dry-run", out.getvalue())
         self.assertEqual(cli.main(["--root", str(self.root), "fix-refs",
                                    "apply"], out=io.StringIO()), 2)
+
+    def test_apply_from_inside_the_repo_without_root(self):
+        import contextlib, io, os
+        self.write("wiki/b.md", "b\n")
+        self.write("wiki/sub/a.md", "[b](../b.md)\n")
+        self.commit_all()
+        self.move("wiki/b.md", "wiki/deep/b.md")
+        cwd = os.getcwd()
+        os.chdir(self.root / "wiki" / "sub")   # a subdirectory, on purpose
+        self.addCleanup(os.chdir, cwd)
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = cli.main(["fix-refs", "apply"], out=io.StringIO())
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.read("wiki/sub/a.md"), "[b](../deep/b.md)\n")
 
 
 if __name__ == "__main__":
