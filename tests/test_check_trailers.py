@@ -139,6 +139,21 @@ class WiringTest(unittest.TestCase):
                             'scripts/check', 'scripts/check_trailers.py'}:
             self.assertTrue(os.access(ROOT / rel, os.X_OK), rel)
 
+    def test_check_script_drops_a_hooks_git_env(self):
+        # pre-push runs scripts/check with GIT_DIR exported; a stub python3
+        # on PATH reports what the steps would inherit.
+        with tempfile.TemporaryDirectory() as d:
+            stub = Path(d) / 'python3'
+            stub.write_text('#!/bin/sh\necho "GIT_DIR=${GIT_DIR-unset}"\n')
+            stub.chmod(0o755)
+            env = dict(os.environ, PATH=f'{d}:{os.environ["PATH"]}',
+                       GIT_DIR='/nonexistent/.git',
+                       GIT_INDEX_FILE='/nonexistent/index')
+            r = subprocess.run([str(ROOT / 'scripts' / 'check')], env=env,
+                               capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(set(r.stdout.split()), {'GIT_DIR=unset'})
+
     def test_claude_dir_is_real_with_symlinks_into_agents(self):
         claude = ROOT / '.claude'
         self.assertTrue(claude.is_dir() and not claude.is_symlink())
