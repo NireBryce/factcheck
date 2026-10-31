@@ -148,10 +148,12 @@ def check_restatement(root, cfg):
         length = n + NGRAM - 1
         words = [w for w, _ in files[a]]
         text = " ".join(words[pa:pa + length])
+        # The path points at the longest shared span in `a`, as other
+        # checks' `path:line` do; the message names where it is in `b`.
         findings.append(Finding(
-            'RESTATEMENT', a,
-            f"~{total} words shared with {b} in {len(spans)} span(s); "
-            f"longest {length}w at {a}:{files[a][pa][1]} and "
-            f"{b}:{files[b][pb][1]}: “{text[:100]}”",
+            'RESTATEMENT', f"{a}:{files[a][pa][1]}",
+            f"~{total} words shared with {b}:{files[b][pb][1]} "
+            f"({len(spans)} span(s), longest {length}w): "
+            f"“{text[:100]}”",
             review=True, see=SEE))
     return findings
