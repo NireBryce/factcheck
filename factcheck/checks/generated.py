@@ -26,6 +26,15 @@ def fix_generated(root, cfg, files):
     plugins.load(cfg)
     pages = [(Path(f) if Path(f).is_absolute() else Path.cwd() / f).resolve()
              for f in files]
+    root = Path(root).resolve()
+    for page in pages:
+        if not page.is_file():
+            print(f"fix-generated: {page} does not exist")
+            return 2
+        if not page.is_relative_to(root):
+            print(f"fix-generated: {page} is outside the repo root {root} "
+                  f"(file arguments resolve against the current directory)")
+            return 2
     findings, notes = genregions.run(root, pages, write=True)
     named = {p.relative_to(root).as_posix() for p in pages}
     # A region whose home page wasn't named isn't missing, just not asked

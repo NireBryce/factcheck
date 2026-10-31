@@ -68,6 +68,17 @@ class ReadmeRegion(unittest.TestCase):
         self.assertEqual(self.fix(), (0, ''))
         self.assertEqual(generated.check_generated(self.root, self.cfg), [])
 
+    def test_missing_or_outside_page_is_a_usage_error(self):
+        import tempfile as tf
+        with tf.TemporaryDirectory() as other:
+            outside = pathlib.Path(other) / 'README.md'
+            outside.write_text('x\n')
+            for arg in (str(outside), str(self.root / 'nope.md')):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    rc = generated.fix_generated(self.root, self.cfg, [arg])
+                self.assertEqual(rc, 2, out.getvalue())
+
 
 if __name__ == '__main__':
     unittest.main()
