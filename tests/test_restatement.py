@@ -19,10 +19,11 @@ class Restatement(Tree):
         self.write('docs/guide.md', f'# G\n\nElsewhere, {FACT}. Also more.\n')
         self.write('docs/other.md', '# O\n\nnothing in common at all here.\n')
         f = self.findings()
+        # path:line at the longest span in one doc, the other's in the
+        # message.
         self.assertEqual([(x.path, x.review) for x in f],
-                         [('AGENTS.md', True)])
-        self.assertIn('docs/guide.md', f[0].message)
-        self.assertIn('AGENTS.md:3', f[0].message)
+                         [('AGENTS.md:3', True)])
+        self.assertIn('docs/guide.md:3', f[0].message)
 
     def test_under_the_floor_is_not_reported(self):
         short = 'one two three four five six seven eight nine'

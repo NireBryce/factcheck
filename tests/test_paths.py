@@ -48,6 +48,13 @@ class Paths(Tree):
         data = {'paths': {'enable': True, 'exts': ['.rs']}}
         self.assertEqual(len(self.findings('`gone.py` `gone.rs`\n', data)), 1)
 
+    def test_a_line_number_after_the_name_is_dropped(self):
+        self.assertEqual(self.findings(
+            '`checks/links.py:12` and `checks/links.py:3-9`\n'), [])
+        f = self.findings('`checks/gone.py:12`\n')
+        self.assertEqual(len(f), 1)
+        self.assertIn('`checks/gone.py`', f[0].message)
+
     def test_fenced_code_is_skipped(self):
         self.assertEqual(self.findings('```\n`gone.py`\n```\n'), [])
         self.assertEqual(len(self.findings('```\n```\n`gone.py`\n')), 1)

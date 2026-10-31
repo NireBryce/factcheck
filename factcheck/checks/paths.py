@@ -49,8 +49,12 @@ SEE = ("a backticked name that resolves to no tracked file: a stale "
 
 
 def mention_rx(exts):
+    """A backticked file name, optionally with a line or range after it
+    (`links.py:12`, `x.py:3-9`): the location is dropped, the file
+    checked."""
     return re.compile(
-        r'`([\w./-]+(?:' + '|'.join(re.escape(e) for e in exts) + r'))`')
+        r'`([\w./-]+(?:' + '|'.join(re.escape(e) for e in exts) + r'))'
+        r'(?::\d+(?:-\d+)?)?`')
 
 
 def normalize(token):
