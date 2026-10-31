@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# The one checklist: what CI runs (.github/workflows/ci.yml calls this
+# script, not a copy of its steps) and what .githooks/pre-push runs. A
+# step added here gates every PR with no second edit.
+set -euo pipefail
+# A git hook (pre-push runs this) exports GIT_DIR and friends; inherited,
+# they point every `git` the tests and checks run at the hook's repo
+# instead of each test's throwaway one (nixos-configs lesson 44). Nothing
+# here needs them: git finds the repo from the cwd.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR \
+    GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
+cd "$(dirname "$0")/.."
+python3 -m unittest discover -s tests -t .
+python3 -m factcheck checks
+python3 -m factcheck check

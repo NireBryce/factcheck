@@ -41,3 +41,39 @@ class Links(Tree):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class LinksOutsideCodeOnly(Tree):
+    """A link-shaped string in code is literal text on GitHub, not a link:
+    it isn't checked, and a real link next to it still is."""
+
+    def findings(self, text):
+        self.write('docs/a.md', text)
+        return [f.message for f in links.check_links(self.root, self.cfg())]
+
+    def test_code_span_is_not_a_link(self):
+        self.assertEqual(self.findings('the shape `[t](dir/N-x.md)` here\n'),
+                         [])
+
+    def test_double_backtick_span_with_a_backtick_inside(self):
+        self.assertEqual(self.findings('``[a`b](gone.md)``\n'), [])
+
+    def test_fenced_block_is_not_a_link(self):
+        self.assertEqual(self.findings('```md\n[t](gone.md)\n```\n'
+                                       '~~~\n[t](gone.md)\n~~~\n'), [])
+
+    def test_real_link_next_to_code_is_still_checked(self):
+        f = self.findings('`code` then [t](gone.md) and `more`\n')
+        self.assertEqual(len(f), 1)
+        self.assertIn('gone.md', f[0])
+
+    def test_unclosed_or_escaped_backtick_does_not_hide_a_link(self):
+        self.assertEqual(len(self.findings('a ` stray tick [t](gone.md)\n')),
+                         1)
+        self.assertEqual(len(self.findings('\\`[t](gone.md)\\`\n')), 1)
+
+    def test_a_span_does_not_cross_a_blank_line(self):
+        # The backticks are in different paragraphs, so neither opens a
+        # span and the link between them is real.
+        self.assertEqual(len(self.findings('a `\n\n[t](gone.md)\n\nb `\n')),
+                         1)

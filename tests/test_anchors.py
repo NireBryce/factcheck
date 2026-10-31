@@ -54,3 +54,10 @@ class Anchors(Tree):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class AnchorsOutsideCodeOnly(Tree):
+    def test_fragment_in_code_is_not_checked(self):
+        self.write('docs/a.md', '# A\n\nSee `[x](#nowhere)` and\n\n'
+                   '```\n[y](#nowhere)\n```\n')
+        self.assertEqual(anchors.check_anchors(self.root, self.cfg()), [])
