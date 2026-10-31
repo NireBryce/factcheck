@@ -55,6 +55,7 @@ pipx install git+https://github.com/NireBryce/factcheck
 ./bin/factcheck links --root .    # one check
 ./bin/factcheck checks            # what's registered
 ./bin/factcheck fix-contents PAGE.md   # a fixer, not a check
+./bin/factcheck fix-refs dry-run        # after `git mv`: what references it would rewrite
 ```
 
 With no `factcheck.toml`, the `docs` and `pages` scopes are every
@@ -82,6 +83,7 @@ load = ["plugins/my-checks.py"]
 | `anchors` | every `#fragment` resolves to a real heading, slugged the way GitHub renders it, including `-1` dedup counters | scope `docs` |
 | `contents` | a page's `## Contents` list matches its own headings; a page that should have one has one | scope `pages`, `[contents] exempt` |
 | `fix-contents` | *fixer*: rewrites a Contents block in place; replaces only the bullet run, never the surrounding prose | — |
+| `fix-refs` | *fixer*: after `git mv`, rewrites references to the moved paths in every tracked text file -- markdown links (re-relativised from the linking file's new location), reference definitions, and bare repo paths in prose, code and scripts; whole-directory moves are inferred. Paths a program builds from pieces, and depth-sensitive code in moved scripts, print as `REVIEW` lines instead. `factcheck fix-refs dry-run` lists what would change | `[fix-refs] exclude`; extra moves as `OLD=NEW` arguments |
 | `dates` | the `_Last modified: YYYY-MM-DD_` line exists right after the title, in exactly the configured shape, and isn't in the future | scope `pages`, `[dates] line` |
 | `siblings` | the `<page>-for-agents.md` pairing: no orphans, long sources have a sibling (or a folded `## Quick facts` section), the sibling isn't older than its source unless a dated reviewed-line says why, word budget (REVIEW only), back-links both ways | scope `pages`, `[siblings] suffix, required-words, budget, fold-heading, exempt` |
 | `recipes` | every backtick `` `just <recipe>` `` mention names a real recipe (handles `just key=value <recipe>` overrides and `mod` module names) | scope `docs`, `[recipes] justfile` |
