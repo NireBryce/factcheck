@@ -6,6 +6,12 @@
 
 [scopes]
 docs = ["README.md", "plugins/example/*.py"]
+pages = ["README.md"]
 
 [checks]
 disabled = ["contents", "dates", "siblings"]
+
+# This repo's own region: the README checks table, rendered from the
+# registry (plugins/readme_checks_table.py).
+[plugins]
+load = ["plugins/readme_checks_table.py"]

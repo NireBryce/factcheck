@@ -55,6 +55,7 @@ pipx install git+https://github.com/NireBryce/factcheck
 ./bin/factcheck links --root .    # one check
 ./bin/factcheck checks            # what's registered
 ./bin/factcheck fix-contents PAGE.md   # a fixer, not a check
+./bin/factcheck fix-generated PAGE.md  # rewrite generated regions from their sources
 ./bin/factcheck fix-refs dry-run        # after `git mv`: what references it would rewrite
 ```
 
@@ -77,23 +78,33 @@ load = ["plugins/my-checks.py"]
 
 ## The checks
 
+The rows below are generated from the registry, so a check that registers
+without a description fails the self-check until it has one; the two prose
+columns are hand-written. `factcheck fix-generated README.md` regenerates
+it (`plugins/readme_checks_table.py`).
+
+<!-- generated:checks-table -- from the check and fixer registries, by factcheck; change the source, not this table. Hand-written, kept per row: claims it checks, bindings (config) -->
+
 | check | claims it checks | bindings (config) |
 |---|---|---|
-| `links` | every relative markdown link resolves to a real file (percent-decoded first) | scope `docs` |
-| `anchors` | every `#fragment` resolves to a real heading, slugged the way GitHub renders it, including `-1` dedup counters | scope `docs` |
-| `contents` | a page's `## Contents` list matches its own headings; a page that should have one has one | scope `pages`, `[contents] exempt` |
-| `fix-contents` | *fixer*: rewrites a Contents block in place; replaces only the bullet run, never the surrounding prose | — |
-| `fix-refs` | *fixer*: after `git mv`, rewrites references to the moved paths in every tracked text file -- markdown links (re-relativised from the linking file's new location), reference definitions, and bare repo paths in prose, code and scripts; whole-directory moves are inferred. Paths a program builds from pieces, and depth-sensitive code in moved scripts, print as `REVIEW` lines instead. `factcheck fix-refs dry-run` lists what would change | `[fix-refs] exclude`; extra moves as `OLD=NEW` arguments |
-| `dates` | the `_Last modified: YYYY-MM-DD_` line exists right after the title, in exactly the configured shape, and isn't in the future | scope `pages`, `[dates] line` |
-| `siblings` | the `<page>-for-agents.md` pairing: no orphans, long sources have a sibling (or a folded `## Quick facts` section), the sibling isn't older than its source unless a dated reviewed-line says why, word budget (REVIEW only), back-links both ways | scope `pages`, `[siblings] suffix, required-words, budget, fold-heading, exempt` |
 | `recipes` | every backtick `` `just <recipe>` `` mention names a real recipe (handles `just key=value <recipe>` overrides and `mod` module names) | scope `docs`, `[recipes] justfile` |
 | `skills` | every "skill X" / "X skill" mention names a real skill directory | scope `docs`, `[skills] dirs` |
 | `skill-files` | the skill files themselves: the four lookups re-applied to skill prose (backticked-anywhere, bare-in-fences `just` mentions; skill mentions; relative links; repo-rooted backtick paths), plus SKILL.md-only rules — frontmatter `name` matching its directory, a one-sentence description with no repo paths, `when_to_use` under the harness listing cap, plain-YAML-safe values, unknown frontmatter keys, the `**Needs:**` tag vocabulary, and a ban on ` ```! ` / `!`backtick`` ` injection syntax | `[skills] dirs`, `[recipes] justfile`, `[skill-files]` keys/caps/prefixes/needs |
-| `docrefs` | cross-references the narrower checks miss: `just <module> <helper>` naming no recipe in that just module; a `<skills-dir>/<name>` path or an unquoted hyphenated skill mention naming no skill directory; backticked paths under directories that moved (a config data table); a sentence naming one markdown page plus a quoted "…section" the page doesn't have; and BARE COUNT — a number from three up directly before a countable noun, unless the sentence names that many items, ends in a colon, carries a date or "as of", or opts out with `<!-- count-ok: reason -->` | scope `docs` + skills, `[docrefs] agent-module, moved-dirs, count-nouns, exempt` |
+| `links` | every relative markdown link resolves to a real file (percent-decoded first) | scope `docs` |
+| `anchors` | every `#fragment` resolves to a real heading, slugged the way GitHub renders it, including `-1` dedup counters | scope `docs` |
+| `contents` | a page's `## Contents` list matches its own headings; a page that should have one has one | scope `pages`, `[contents] exempt` |
+| `dates` | the `_Last modified: YYYY-MM-DD_` line exists right after the title, in exactly the configured shape, and isn't in the future | scope `pages`, `[dates] line` |
 | `counts` | prose count claims — "all five hosts", "all three nixos hosts", "two of the three nixos hosts" — against actual counts | scope `docs`, `[counts] noun, classes, source, counters`, counters from plugins |
+| `generated` | every registered generated region exists on its home page and renders exactly what its source produces today; hand-written columns are carried per row, and a new row's empty hand cell is a finding until filled | regions registered by plugins |
+| `siblings` | the `<page>-for-agents.md` pairing: no orphans, long sources have a sibling (or a folded `## Quick facts` section), the sibling isn't older than its source unless a dated reviewed-line says why, word budget (REVIEW only), back-links both ways | scope `pages`, `[siblings] suffix, required-words, budget, fold-heading, exempt` |
 | `rules` | path-scoped rule files: frontmatter is exactly a non-empty `paths:` list of quoted globs, every glob matches a git-tracked file, and the pointer doc names each rule | `[rules] dir, pointer` |
 | `summaries` | every tracked file under a directory carries a marker line (default: `# package summary:` on package modules) | `[summaries] dir, suffix, marker, tag, exclude-*` |
-| `generated` | every registered generated region exists on its home page and renders exactly what its source produces today; hand-written columns are carried per row, and a new row's empty hand cell is a finding until filled | regions registered by plugins |
+| `docrefs` | cross-references the narrower checks miss: `just <module> <helper>` naming no recipe in that just module; a `<skills-dir>/<name>` path or an unquoted hyphenated skill mention naming no skill directory; backticked paths under directories that moved (a config data table); a sentence naming one markdown page plus a quoted "…section" the page doesn't have; and BARE COUNT — a number from three up directly before a countable noun, unless the sentence names that many items, ends in a colon, carries a date or "as of", or opts out with `<!-- count-ok: reason -->` | scope `docs` + skills, `[docrefs] agent-module, moved-dirs, count-nouns, exempt` |
+| `fix-contents` | *fixer*: rewrites a Contents block in place; replaces only the bullet run, never the surrounding prose | — |
+| `fix-generated` | *fixer*: rewrites every registered region on the named pages from its source, keeping hand-written cells per row; prints any hand text a dropped row carried, and exits 1 while a hand cell is empty | regions registered by plugins |
+| `fix-refs` | *fixer*: after `git mv`, rewrites references to the moved paths in every tracked text file -- markdown links (re-relativised from the linking file's new location), reference definitions, and bare repo paths in prose, code and scripts; whole-directory moves are inferred. Paths a program builds from pieces, and depth-sensitive code in moved scripts, print as `REVIEW` lines instead. `factcheck fix-refs dry-run` lists what would change | `[fix-refs] exclude`; extra moves as `OLD=NEW` arguments |
+
+<!-- /generated -->
 
 Counters for `counts` come from three places, in precedence order: a
 static value in config (`total = 5`), a glob count (`total = { glob =
