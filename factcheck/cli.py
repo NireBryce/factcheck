@@ -12,7 +12,7 @@ any hard finding, 2 = usage error.
 import sys
 from pathlib import Path
 
-from . import capabilities, checks, config, fixers, plugins, registry
+from . import capabilities, checks, config, fixers, gitfiles, plugins, registry
 from .findings import see_lines
 
 USAGE = """\
@@ -66,6 +66,7 @@ def _run_checks(cmd, root, cfg, skip, out):
     # validated strictly: a typo there should stop the run, not no-op it.
     disabled = cfg.disabled()
     all_findings = []
+    no_git = []
     for name, c in registry.registered():
         if cmd not in (name, 'check') or name in skip or name in disabled:
             continue
@@ -73,7 +74,12 @@ def _run_checks(cmd, root, cfg, skip, out):
             out.write(f"{name}: skipped (needs {cap_skip[name]}, "
                       f"unavailable here)\n")
             continue
-        all_findings += c.fn(root, cfg)
+        try:
+            all_findings += c.fn(root, cfg)
+        except gitfiles.NotAGitCheckout as e:
+            out.write(f"{name}: skipped -- {e}; it reads git-tracked "
+                      f"files\n")
+            no_git.append(name)
 
     if cmd == 'check' and skip:
         out.write(f"check: skipped {', '.join(sorted(skip))} (--skip)\n")
@@ -83,11 +89,18 @@ def _run_checks(cmd, root, cfg, skip, out):
     for line in see_lines(all_findings):
         out.write(line + '\n')
     hard = [f for f in all_findings if not f.review]
-    if not all_findings:
+    if no_git:
+        pass  # the could-not-run line below is the status
+    elif not all_findings:
         out.write(f"{cmd}: no findings\n")
     elif not hard:
         out.write(f"{cmd}: only REVIEW findings (heuristic, needs a human "
                   f"look) -- not failing on those alone\n")
+    if no_git:
+        # A check that couldn't run is not a pass: say so in the status.
+        out.write(f"{cmd}: {len(no_git)} check(s) could not run without "
+                  f"a git checkout -- pass the repository with --root\n")
+        return 2
     return 1 if hard else 0
 
 
@@ -135,6 +148,12 @@ def main(argv=None, out=None):
     root_arg = (positional[1] if len(positional) > 1
                 and cmd not in fixers.FIXERS else None)
     root = Path(root_override or root_arg or Path.cwd()).resolve()
+    if not root.is_dir():
+        given = root_override or root_arg
+        out.write(f"not a directory: {given} -- `{cmd}` takes an optional "
+                  f"repository root (or --root); to run one check, name it "
+                  f"(`factcheck checks` lists them)\n")
+        return 2
     if len(positional) > 1 and cmd not in ('check', *registry.names(),
                                            *fixers.FIXERS):
         out.write(f"unexpected argument {positional[1]!r} for {cmd!r}\n")
