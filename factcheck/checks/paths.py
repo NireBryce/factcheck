@@ -23,16 +23,21 @@ Opt-in, because a repo whose docs keep historical names gets steady noise:
     exts = [".py", ".md", ...]        # which backticked names count as files
     ignore = ["^nixpkgs/", "example"] # regexes; a matching mention is skipped
 
-A line carrying `<!-- path-ok: reason -->` is skipped. Needs git: only
-tracked files count, since a clone never sees an untracked one.
+Fenced code is skipped (sample output and tree listings name files
+freely). A line carrying `<!-- path-ok: reason -->` is skipped. Matching
+is case-sensitive, as git's paths are. Needs git: only tracked files
+count, since a clone never sees an untracked one; outside a git checkout
+the check reports that once instead of running.
 
 Generalized from the wiki_stale_refs.py script of the repo factcheck was
 extracted from.
 """
 import re
+import subprocess
 
 from ..findings import Finding
 from ..gitfiles import tracked_files
+from ..mdcore import fences
 from ..registry import check
 
 DEFAULT_EXTS = ['.nix', '.py', '.sh', '.md', '.yaml', '.yml', '.json',
@@ -50,8 +55,13 @@ def mention_rx(exts):
 
 def normalize(token):
     """`../flake/doc/foo.md` -> `flake/doc/foo.md`: a path written relative
-    to a nested page still suffix-matches the repo-relative tracked one."""
-    return '/'.join(p for p in token.split('/') if p not in ('.', '..', ''))
+    to a nested page still suffix-matches the repo-relative tracked one.
+    Only *leading* `.`/`..` segments go (and a leading `/`, read as
+    repo-rooted); one in the middle is kept, so it can't resolve."""
+    parts = token.split('/')
+    while parts and parts[0] in ('.', '..', ''):
+        parts.pop(0)
+    return '/'.join(parts)
 
 
 def resolves(token, tracked, suffixes):
@@ -77,13 +87,18 @@ def check_paths(root, cfg):
         return []
     rx = mention_rx(s.get('exts', DEFAULT_EXTS))
     ignore = [re.compile(p) for p in s.get('ignore', [])]
-    tracked = set(tracked_files(root))
+    try:
+        tracked = set(tracked_files(root))
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return [Finding('PATHS NEEDS GIT', str(root),
+                        "not a git checkout: `paths` reads git-tracked files",
+                        review=True)]
     suffixes = all_suffixes(tracked)
     findings = []
     for path in cfg.scope('docs'):
         rel = path.relative_to(root).as_posix()
-        for n, line in enumerate(path.read_text().splitlines(), 1):
-            if PATH_OK.search(line):
+        for n, line, kind in fences.scan_lines(path.read_text()):
+            if kind != fences.TEXT or PATH_OK.search(line):
                 continue
             for m in rx.finditer(line):
                 tok = m.group(1)

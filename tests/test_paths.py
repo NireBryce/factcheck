@@ -48,5 +48,24 @@ class Paths(Tree):
         data = {'paths': {'enable': True, 'exts': ['.rs']}}
         self.assertEqual(len(self.findings('`gone.py` `gone.rs`\n', data)), 1)
 
+    def test_fenced_code_is_skipped(self):
+        self.assertEqual(self.findings('```\n`gone.py`\n```\n'), [])
+        self.assertEqual(len(self.findings('```\n```\n`gone.py`\n')), 1)
+
+    def test_only_leading_dot_segments_are_dropped(self):
+        # Dropping the middle `..` would turn this into the tracked
+        # `factcheck/checks/links.py`.
+        self.assertEqual(len(self.findings(
+            '`factcheck/../checks/links.py`\n')), 1)
+        self.assertEqual(self.findings('`/factcheck/checks/links.py`\n'), [])
+
     def test_off_unless_enabled(self):
         self.assertEqual(self.findings('`gone.py`\n', {}), [])
+
+
+class NotARepo(Tree):
+    def test_reports_once_instead_of_crashing(self):
+        self.write('README.md', '`gone.py`\n')
+        f = paths.check_paths(self.root, self.cfg(ON))
+        self.assertEqual([(x.tag, x.review) for x in f],
+                         [('PATHS NEEDS GIT', True)])
