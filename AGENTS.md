@@ -83,6 +83,14 @@ commit, which cwd, which Python.
 failed. Use `set -o pipefail` or don't pipe (§20). Python puts the cause
 at the bottom of a traceback; read to the end.
 
+**Tests never touch a repo they didn't create.** A git hook exports
+`GIT_DIR` and friends, and the suite runs inside one (pre-push); inherited,
+they aim a test's `git -C <tmp>` at the hook's repo. `tests/__init__.py`
+strips them before any test loads, and `scripts/check` clears them too, so
+a new test that shells out to git needs nothing extra
+(nixos-configs §44; on 2026-10-31 this wrote a fake identity into the
+shared repo config before it was in place).
+
 **Each commit is green on its own** (§15). Check what is staged before
 committing, and never describe in a message what the commit doesn't
 contain yet.
