@@ -110,6 +110,10 @@ class CommitMsgHookTest(unittest.TestCase):
         self.assertEqual(self.rewrite(f'feat: x\n\n{LOWER}\n'),
                          f'feat: x\n\n{GOOD}\n')
 
+    def test_rewrites_a_wrong_line_beside_a_canonical_one(self):
+        self.assertEqual(self.rewrite(f'feat: x\n\n{GOOD}\n{BAD}\n'),
+                         f'feat: x\n\n{GOOD}\n{GOOD}\n')
+
     def test_leaves_canonical_and_other_agents(self):
         body = f'feat: x\n\n{GOOD}\n{OTHER}\n'
         self.assertEqual(self.rewrite(body), body)

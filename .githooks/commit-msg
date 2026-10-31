@@ -28,7 +28,10 @@ canonical="Co-Authored-By: Claude"
 # down to the bare canonical form.
 pattern='^[Cc]o-[Aa]uthored-[Bb]y:[[:space:]]+Claude([[:space:]]+[^<]*)?([[:space:]]*<[^>]*>)?[[:space:]]*$'
 
-if grep -qE "$pattern" "$msg_file" && ! grep -qxF "$canonical" "$msg_file"; then
+# Rewrite when any Claude trailer line is not already canonical -- not
+# merely when no canonical line exists, or a message carrying both would
+# keep the wrong one.
+if grep -E "$pattern" "$msg_file" | grep -qvxF "$canonical"; then
     # Temp file + mv instead of sed -i: BSD sed's "-i -E" eats "-E" as the
     # backup suffix, and this hook runs on both darwin and NixOS.
     tmp=$(mktemp "${msg_file}.XXXXXX")

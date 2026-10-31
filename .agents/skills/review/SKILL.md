@@ -40,12 +40,12 @@ Reading a diff is never enough.
 - **A new check without a failing fixture.** Its test must fail with the
   check removed or broken. Try it: comment out the check's core and run
   the test.
-- **A test whose input is only the author's model of a doc** (§50). Prefer
+- **A test whose input is only the author's model of a doc** (nixos-configs §50). Prefer
   a fixture lifted from a real consumer's docs.
-- **A trigger that never fires** (§28). Does the pattern occur in any real
+- **A trigger that never fires** (nixos-configs §28). Does the pattern occur in any real
   input? A check that has never produced a finding outside its own test
   is unproven.
-- **Silent misses in a regex over prose** (§22): `\w` misses `-`, a
+- **Silent misses in a regex over prose** (nixos-configs §22): `\w` misses `-`, a
   backtick or a line wrap splits the token, case differs. Is there a
   fixture for each spelling the docs actually use?
 - **Hard vs REVIEW.** A heuristic that can be wrong on a correct doc must

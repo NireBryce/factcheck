@@ -37,7 +37,7 @@ first" didn't make the check happen; a triggered skill does.
 2. **Hit:** read it fully and resume from where it left off. If it is
    stale or wrong, fix *that*; don't start a parallel investigation.
 3. **No hit:** reproduce for real, with the reporter's input, not a
-   fixture you wrote from the description (AGENTS.md, §50). Once it's
+   fixture you wrote from the description (AGENTS.md; nixos-configs §50). Once it's
    diagnosed, don't leave it only in your reply: propose an issue, and
    add the failing input as a fixture test with the fix.
 4. **Say fixed vs verified precisely.** A fix with a passing fixture is
