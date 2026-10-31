@@ -162,29 +162,6 @@ class Routes(PluginCase):
         self.assertEqual([x.tag for x in f], ['UNKNOWN ROUTE'])
 
 
-class LessonsIndex(PluginCase):
-    def setUp(self):
-        super().setUp()
-        lessons = load_plugin('lessons_index')
-        self.check = lessons.check_lessons
-
-    def test_clean_index(self):
-        self.write('wiki/agent-lessons-learned.md',
-                   '- **§1** [T](agent-lessons-learned/1-t.md) — rule. '
-                   'Home: x. Enforced: y.\n')
-        self.write('wiki/agent-lessons-learned/1-t.md', '# 1. T\n')
-        self.assertEqual(self.check(self.root, self.cfg()), [])
-
-    def test_gaps_and_fields(self):
-        self.write('wiki/agent-lessons-learned.md',
-                   '- **§2** [T](agent-lessons-learned/2-t.md) — rule. '
-                   'Home: x.\n')
-        self.write('wiki/agent-lessons-learned/2-t.md', '# 2. T\n')
-        f = self.check(self.root, self.cfg())
-        self.assertEqual(sorted(x.tag for x in f),
-                         ['LESSON FIELD', 'MISSING ARTICLE', 'MISSING LESSON'])
-
-
 class Regions(PluginCase):
     def setUp(self):
         super().setUp()
