@@ -36,6 +36,21 @@ class Dates(Tree):
         f = self.findings()
         self.assertEqual([x.tag for x in f], ['FUTURE DATE'])
 
+    def test_impossible_date_is_a_finding_not_a_crash(self):
+        # The line regex accepts the shape; the calendar has no Feb 30.
+        self.write('wiki/p.md', '# P\n\n_Last modified: 2026-02-30_\n\n## A\n')
+        f = self.findings()
+        self.assertEqual([x.tag for x in f], ['INVALID DATE'])
+        self.assertIn('2026-02-30', f[0].message)
+
+    def test_last_modified_is_none_for_an_impossible_date(self):
+        rx = dates.line_regex(self.cfg())
+        self.assertIsNone(dates.last_modified(
+            '# P\n\n_Last modified: 2026-13-01_\n', rx))
+        self.assertEqual(dates.last_modified(
+            '# P\n\n_Last modified: 2026-02-28_\n', rx),
+            datetime.date(2026, 2, 28))
+
     def test_no_title_line_is_skipped(self):
         self.write('notes.md', 'plain text, no markdown title\n')
         self.assertEqual(self.findings(), [])

@@ -132,10 +132,7 @@ def rank(root, cfg):
     for path in cfg.scope('docs'):
         rel = path.relative_to(root).as_posix()
         text = path.read_text(errors="replace")
-        try:
-            d = dates.last_modified(text, date_rx)
-        except ValueError:   # a date-shaped line that isn't a real date
-            d = None
+        d = dates.last_modified(text, date_rx)   # None for an impossible date
         date = d.isoformat() if d else _git(
             root, "log", "-1", "--format=%cs", "--", rel).strip()
         if not date:

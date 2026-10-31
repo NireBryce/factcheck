@@ -78,11 +78,16 @@ def _words(text):
 def _reviewed(text):
     """The sibling's reviewed date and reason, or (None, None). Read from
     the same head-of-file window as `last_modified` so the two lines stay
-    visually adjacent."""
+    visually adjacent. A line whose date isn't a real day gives
+    (False, raw-date): present, but no date to honour."""
+    from .dates import parse_date
     for line in text.splitlines()[:8]:
         m = REVIEWED_LINE.match(line)
         if m:
-            return datetime.date.fromisoformat(m.group(1)), m.group(2).strip()
+            date = parse_date(m.group(1))
+            if date is None:
+                return False, m.group(1)
+            return date, m.group(2).strip()
     return None, None
 
 
@@ -111,6 +116,12 @@ def check_siblings(root, cfg):
         src_date = last_modified(src_text, rx)
         sib_date = last_modified(sib_text, rx)
         rev_date, rev_reason = _reviewed(sib_text)
+        if rev_date is False:
+            findings.append(Finding(
+                'INVALID REVIEW DATE', rel_sib,
+                f"Sibling reviewed says {rev_reason}, which is not a real "
+                f"date -- it can't excuse a stale pair", see=SYNC_SEE))
+            rev_date, rev_reason = None, None
         if rev_date and rev_date > datetime.date.today():
             findings.append(Finding(
                 'FUTURE REVIEW', rel_sib,
