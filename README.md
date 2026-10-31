@@ -91,6 +91,7 @@ load = ["plugins/my-checks.py"]
 | `counts` | prose count claims — "all five hosts", "all three nixos hosts", "two of the three nixos hosts" — against actual counts | scope `docs`, `[counts] noun, classes, source, counters`, counters from plugins |
 | `rules` | path-scoped rule files: frontmatter is exactly a non-empty `paths:` list of quoted globs, every glob matches a git-tracked file, and the pointer doc names each rule | `[rules] dir, pointer` |
 | `summaries` | every tracked file under a directory carries a marker line (default: `# package summary:` on package modules) | `[summaries] dir, suffix, marker, tag, exclude-*` |
+| `drift` | where an accuracy pass should start: each doc's commits since its date (the `dates` line, else its last commit) under the files and directories it cites in backticks or links, markdown changes not counted. REVIEW only, top docs first; a commit under a cited path is a lead, not a claim the doc is wrong. Opt-in | scope `docs`, `[dates] line`, `[drift] enable, top, min-commits, min-dir-depth` |
 | `generated` | every registered generated region exists on its home page and renders exactly what its source produces today; hand-written columns are carried per row, and a new row's empty hand cell is a finding until filled | regions registered by plugins |
 
 Counters for `counts` come from three places, in precedence order: a
