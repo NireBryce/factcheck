@@ -23,6 +23,8 @@ commands:
   <check-name>         run one check (`factcheck checks` lists them)
   checks               list registered checks and fixers
   fix-contents <f...>  rewrite pages' Contents blocks (a fixer, not a check)
+  fix-refs apply|dry-run [OLD=NEW...]
+                       rewrite references to paths moved with `git mv`
 
 global options:
   --root PATH          repository to check (default: cwd)
@@ -140,10 +142,10 @@ def main(argv=None, out=None):
     # `check`'s aggregate; a fixer name never collides with a check name.
     if cmd in fixers.FIXERS:
         if len(positional) < 2:
-            out.write(f"usage: factcheck {cmd} <file.md> [file.md ...]\n")
+            out.write(fixers.USAGE.get(
+                cmd, f"usage: factcheck {cmd} <file.md> [file.md ...]\n"))
             return 2
-        fixers.FIXERS[cmd](root, cfg, positional[1:])
-        return 0
+        return fixers.FIXERS[cmd](root, cfg, positional[1:]) or 0
 
     plugins.load(cfg)
     return _run_checks(cmd, root, cfg, skip, out)
