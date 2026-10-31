@@ -6,7 +6,7 @@ so."""
 import urllib.parse
 
 from ..findings import Finding
-from ..mdcore.links import MD_LINK
+from ..mdcore.links import link_targets
 from ..registry import check
 
 SEE = "a rename left a reference behind: fix the link or restore the target"
@@ -22,7 +22,7 @@ def check_links(root, cfg):
     actually works."""
     findings = []
     for path in cfg.scope('docs'):
-        for m in MD_LINK.finditer(path.read_text()):
+        for m in link_targets(path.read_text()):
             target = m.group(1).strip()
             if target.startswith(('http://', 'https://', 'mailto:')):
                 continue

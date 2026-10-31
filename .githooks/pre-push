@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Runs scripts/check -- the same command CI runs -- before a push leaves
+# the clone. Wired by `git config core.hooksPath .githooks` (the
+# session-start hook sets it when unset). Stdlib-only, so there is no
+# environment for it to degrade from.
+set -euo pipefail
+repo_root=$(git rev-parse --show-toplevel)
+exec "$repo_root/scripts/check"

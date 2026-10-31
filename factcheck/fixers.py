@@ -7,12 +7,18 @@ their fixer in the message. Registration is a separate table from the
 check registry on purpose: the two kinds share nothing but the CLI.
 """
 FIXERS = {}
+# Per-fixer usage line, for a fixer whose arguments aren't files.
+USAGE = {}
 
 
-def fixer(name):
-    """Registers `fn(root, cfg, args) -> None` as the `name` subcommand."""
+def fixer(name, usage=None):
+    """Registers `fn(root, cfg, args) -> int | None` as the `name`
+    subcommand. A returned int is the exit status (None means 0); `usage`
+    replaces the default `<file.md> [file.md ...]` usage line."""
     def register(fn):
         assert name not in FIXERS, f"fixer {name!r} registered twice"
         FIXERS[name] = fn
+        if usage:
+            USAGE[name] = usage
         return fn
     return register
