@@ -1,0 +1,25 @@
+{
+  "attribution": {
+    "commit": "Co-Authored-By: Claude"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(scripts/check)",
+      "Bash(python3 -m factcheck checks)",
+      "Bash(python3 -m factcheck check)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR/.agents/hooks/session-start.sh\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
