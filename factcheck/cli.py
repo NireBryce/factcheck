@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from . import capabilities, checks, config, fixers, gitfiles, plugins, registry
-from .findings import see_lines
+from .findings import Finding, see_lines
 
 # Commands the ancestor tool had under another name. A user (or a doc)
 # reaching for the old verb gets the new one, not "unknown command".
@@ -54,6 +54,32 @@ def _capability_skips():
     return out
 
 
+class _BadCheckResult(Exception):
+    """A check returned something other than an iterable of Findings."""
+
+
+def _findings_of(name, c, result):
+    """`result` as a list of Findings, or _BadCheckResult naming the check.
+
+    A plugin that cannot import factcheck (a stdlib-only hook module) can
+    hand back plain strings, and a check that forgets `return` hands back
+    None. Without this, the run died later in `see_lines` with an
+    AttributeError that named neither the check nor its plugin."""
+    where = f"check {name!r} ({c.fn.__module__}.{c.fn.__qualname__})"
+    want = "; a check must return a list of factcheck.findings.Finding"
+    if (result is None or isinstance(result, (str, bytes))
+            or not hasattr(result, '__iter__')):
+        raise _BadCheckResult(
+            f"{where} returned {type(result).__name__}{want}")
+    items = list(result)
+    bad = sorted({type(f).__name__ for f in items
+                  if not isinstance(f, Finding)})
+    if bad:
+        raise _BadCheckResult(
+            f"{where} returned a list containing {', '.join(bad)}{want}")
+    return items
+
+
 def _run_checks(cmd, root, cfg, skip, out):
     if cmd == 'checks':
         for name, c in registry.registered():
@@ -86,11 +112,14 @@ def _run_checks(cmd, root, cfg, skip, out):
                       f"unavailable here)\n")
             continue
         try:
-            all_findings += c.fn(root, cfg)
+            all_findings += _findings_of(name, c, c.fn(root, cfg))
         except gitfiles.NotAGitCheckout as e:
             out.write(f"{name}: skipped -- {e}; it reads git-tracked "
                       f"files\n")
             no_git.append(name)
+        except _BadCheckResult as e:
+            out.write(f"{e}\n")
+            return 2
 
     if cmd == 'check' and skip:
         out.write(f"check: skipped {', '.join(sorted(skip))} (--skip)\n")
