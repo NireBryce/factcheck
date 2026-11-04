@@ -129,8 +129,9 @@ can't be sure about are marked `REVIEW` and never fail a run on their own
 (the run says so explicitly rather than passing silently); everything else
 is hard and exits 1. Exit 2 means a usage error (an unknown flag or
 command, a root that isn't a directory), or a check that reads git-tracked
-files could not run because the root isn't inside a git checkout; it says
-which, never with a traceback. After the findings, one
+files could not run because the root isn't inside a git checkout, or a plugin
+check returned something other than `Finding` objects; it says which and
+names the check, never with a traceback. After the findings, one
 `-> TAG: see <advice>` line per kind points at the fix.
 
 `--skip=a,b` leaves named checks out of `check` and says so in the output;
@@ -158,6 +159,12 @@ def check_my_roster(root, cfg):
     ...
     return [Finding('MY TAG', rel_path, "what's wrong")]
 ```
+
+A check must return an iterable of `Finding` objects, an empty one when
+clean. A plain string, or `None` from a forgotten `return`, stops the run
+with exit 2 and a message naming the check. A helper that cannot import
+factcheck (a stdlib-only hook module, say) should return its own tuples or
+strings, and the plugin wraps them in `Finding` at the boundary.
 
 Registration is the subcommand table: a registered check gets its own
 subcommand, a place in `check`'s output order, and `--skip` support, and

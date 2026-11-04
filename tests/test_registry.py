@@ -129,6 +129,48 @@ class Cli(unittest.TestCase):
             registry.CHECKS.clear()
             registry.CHECKS.update(saved)
 
+    def test_a_check_returning_strings_exits_2_and_names_the_check(self):
+        # A plugin that cannot import factcheck (a stdlib-only hook module)
+        # can hand back plain strings. The runner used to die in
+        # `see_lines` with `'str' object has no attribute 'see'`, naming
+        # no check.
+        saved = dict(registry.CHECKS)
+        try:
+            registry.CHECKS.clear()
+
+            def strs(root, cfg):
+                return ["DEMO  a.md: a plain string, not a Finding"]
+            registry.check('zz-strs')(strs)
+
+            code, outtext = self.run_cli('check')
+            self.assertEqual(code, 2)
+            self.assertIn("'zz-strs'", outtext)
+            self.assertIn('str', outtext)
+            self.assertIn('Finding', outtext)
+            self.assertNotIn('Traceback', outtext)
+        finally:
+            registry.CHECKS.clear()
+            registry.CHECKS.update(saved)
+
+    def test_a_check_returning_none_exits_2_and_names_the_check(self):
+        # The other common slip: a check that builds its list and forgets
+        # `return`.
+        saved = dict(registry.CHECKS)
+        try:
+            registry.CHECKS.clear()
+
+            def forgot_return(root, cfg):
+                pass
+            registry.check('zz-none')(forgot_return)
+
+            code, outtext = self.run_cli('check')
+            self.assertEqual(code, 2)
+            self.assertIn("'zz-none'", outtext)
+            self.assertIn('NoneType', outtext)
+        finally:
+            registry.CHECKS.clear()
+            registry.CHECKS.update(saved)
+
     def test_positional_repo_root_is_honored_not_dropped(self):
         # The edit hook calls `factcheck siblings <root>`; a silently
         # ignored positional made the check scan the harness's cwd and
