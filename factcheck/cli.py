@@ -35,6 +35,9 @@ commands:
   fix-refs apply|dry-run [OLD=NEW...]
                        rewrite references to paths moved with `git mv`
   fix-generated <f...> rewrite generated regions from their sources
+  pin-gen <file> ...   print (or --write: append) a pin's TOML, resolved
+                       against today's file
+  pin-show [ID]        where each configured pin resolves today
   <command> --help     that command's usage and what it does
 
 global options:
@@ -43,6 +46,27 @@ global options:
                        legacy <root>/factcheck.toml still read)
   --skip=a,b           leave named checks out of `check`
 """
+
+# The pin tools are neither checks nor fixers: they read config and prose
+# and write nothing but a pin's own TOML. Named in one place so the root
+# and argument handling in main() treats them alike.
+PIN_TOOLS = ('pin-gen', 'pin-show')
+
+PIN_TOOL_HELP = {
+    'pin-gen': (
+        "usage: factcheck pin-gen <file> --id NAME "
+        "(--line N | --start S [--end E] | --heading NAME [--level N]) "
+        "[--contains TEXT] [--write]\n"
+        "pin-gen: resolve a selector against the file as it stands today "
+        "and print the pin's TOML (--write appends it to the config "
+        "file). contains is filled with the region's first non-blank "
+        "line unless given, so every generated pin is a drift tripwire."),
+    'pin-show': (
+        "usage: factcheck pin-show [ID]\n"
+        "pin-show: print where every configured pin resolves today, as "
+        "`id file:lo-hi` plus a preview; exit 1 when any pin does not "
+        "resolve, so external tooling can treat that as drift."),
+}
 
 
 def _capability_skips():
@@ -175,6 +199,9 @@ def _help(cmd, out):
             cmd, f"usage: factcheck {cmd} <file.md> [file.md ...]\n"))
         out.write(_summary(cmd, fixers.FIXERS[cmd]) + '\n')
         return 0
+    if cmd in PIN_TOOLS:
+        out.write(PIN_TOOL_HELP[cmd] + '\n')
+        return 0
     if cmd in registry.CHECKS:
         out.write(f"usage: factcheck [global options] {cmd} [repo-root]\n")
         out.write(_summary(cmd, registry.CHECKS[cmd].fn) + '\n')
@@ -215,8 +242,15 @@ def main(argv=None, out=None):
             skip |= {s for s in a[len('--skip='):].split(',') if s}
             i += 1
         elif a.startswith('-'):
-            out.write(f"unknown flag {a}\n" + USAGE)
-            return 2
+            # After a pin tool's command word, unknown --flags are the
+            # tool's own (--id, --heading, ...), parsed there; anywhere
+            # else an unknown flag is an error, as it always was.
+            if positional and positional[0] in PIN_TOOLS:
+                positional.append(a)
+                i += 1
+            else:
+                out.write(f"unknown flag {a}\n" + USAGE)
+                return 2
         else:
             positional.append(a)
             i += 1
@@ -231,10 +265,12 @@ def main(argv=None, out=None):
     # `factcheck siblings /path/to/repo`, the shape hooks and scripts
     # call with. It must never be silently dropped: a root that stays
     # cwd makes the check scan the wrong repository and exit 0.
-    # A fixer's arguments are its files, never the root: taking the first
-    # one as the root would load config from `<page>/.agents/factcheck`.
+    # A fixer's or pin tool's arguments are its files, never the root:
+    # taking the first one as the root would load config from
+    # `<page>/.agents/factcheck`.
     root_arg = (positional[1] if len(positional) > 1
-                and cmd not in fixers.FIXERS else None)
+                and cmd not in fixers.FIXERS and cmd not in PIN_TOOLS
+                else None)
     root = Path(root_override or root_arg or Path.cwd()).resolve()
     if not root.is_dir():
         given = root_override or root_arg
@@ -243,7 +279,7 @@ def main(argv=None, out=None):
                   f"(`factcheck checks` lists them)\n")
         return 2
     if len(positional) > 1 and cmd not in ('check', *registry.names(),
-                                           *fixers.FIXERS):
+                                           *fixers.FIXERS, *PIN_TOOLS):
         out.write(f"unexpected argument {positional[1]!r} for {cmd!r}\n")
         return 2
     cfg = config.load(root, config_override)
@@ -257,5 +293,143 @@ def main(argv=None, out=None):
             return 2
         return fixers.FIXERS[cmd](root, cfg, positional[1:]) or 0
 
+    # The pin tools read config and prose and print; they need no plugin
+    # registrations, so they dispatch before plugins load.
+    if cmd in PIN_TOOLS:
+        return _pin_tool(cmd, root, cfg, positional[1:], out)
+
     plugins.load(cfg)
     return _run_checks(cmd, root, cfg, skip, out)
+
+
+def _pin_tool(cmd, root, cfg, args, out):
+    from . import pins as pins_mod
+
+    if cmd == 'pin-show':
+        return _pin_show(root, cfg, args, out)
+
+    flags, positional = {}, []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == '--write':
+            flags['write'] = 'yes'
+            i += 1
+        elif a.startswith('--') and '=' in a:
+            flags.setdefault(a[2:].split('=', 1)[0],
+                             a.split('=', 1)[1])
+            i += 1
+        elif a.startswith('--'):
+            if i + 1 >= len(args):
+                out.write(f"{a} needs a value\n" + PIN_TOOL_HELP['pin-gen'])
+                return 2
+            flags[a[2:]] = args[i + 1]
+            i += 2
+        else:
+            positional.append(a)
+            i += 1
+    unknown = sorted(set(flags) - {'id', 'line', 'start', 'end', 'heading',
+                                   'level', 'contains', 'write'})
+    if unknown:
+        out.write(f"unknown flag(s): {', '.join(unknown)}\n"
+                  + PIN_TOOL_HELP['pin-gen'])
+        return 2
+    if len(positional) != 1 or not positional[0]:
+        out.write(PIN_TOOL_HELP['pin-gen'])
+        return 2
+    if not flags.get('id'):
+        out.write("pin-gen needs --id NAME\n" + PIN_TOOL_HELP['pin-gen'])
+        return 2
+    file_arg = positional[0]
+    if Path(file_arg).is_absolute():
+        out.write(f"pin files are repo-relative: {file_arg}\n")
+        return 2
+    pin = {'id': flags['id'], 'file': file_arg}
+    for int_flag in ('line', 'level'):
+        if int_flag in flags:
+            try:
+                pin[int_flag] = int(flags[int_flag])
+            except ValueError:
+                out.write(f"--{int_flag} must be an integer: "
+                          f"{flags[int_flag]!r}\n")
+                return 2
+    for str_flag in ('start', 'end', 'heading', 'contains'):
+        if str_flag in flags:
+            pin[str_flag] = flags[str_flag]
+    try:
+        pins_mod.parse_pin(pin, f"pin {pin['id']!r}")
+        lo, hi, lines = pins_mod.resolve(root, pin)
+    except pins_mod.PinError as e:
+        out.write(f"will not generate an unresolvable pin: {e}\n")
+        return 2
+    if 'contains' not in pin:
+        span = pins_mod.span_text(lines, lo, hi).splitlines()
+        if 'heading' in pin:
+            # The heading line is already guarded by the heading selector
+            # itself; tripwire on the body's first line instead.
+            span = span[1:]
+        first = next((l.strip() for l in span if l.strip()), '')
+        if first:
+            pin['contains'] = first
+
+    def toml_str(s):
+        import json
+        return json.dumps(s)
+
+    block = ['[[pins]]', f"id = {toml_str(pin['id'])}",
+             f"file = {toml_str(pin['file'])}"]
+    for key in ('line', 'start', 'end', 'heading', 'level', 'contains'):
+        if key in pin:
+            block.append(f"{key} = " + (str(pin[key])
+                                        if isinstance(pin[key], int)
+                                        else toml_str(pin[key])))
+    text = '\n'.join(block) + '\n'
+    if flags.get('write'):
+        target = (cfg.source if cfg.source and cfg.source.is_file()
+                  else root / config.CONFIG_FILE)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        sep = '' if not target.exists() or \
+            target.read_text().endswith('\n') else '\n'
+        with open(target, 'a') as f:
+            f.write(sep + text)
+        out.write(f"wrote {target}:\n{text}")
+    else:
+        out.write(text)
+        out.write(f"-- append to {cfg.source or root / config.CONFIG_FILE} "
+                  f"or rerun with --write\n")
+    return 0
+
+
+def _pin_show(root, cfg, args, out):
+    from . import pins as pins_mod
+
+    try:
+        all_pins = pins_mod.parse(cfg.section('pins'))
+    except pins_mod.PinError as e:
+        out.write(f"{e}\n")
+        return 2
+    if args:
+        wanted = set(args)
+        all_pins = [p for p in all_pins if p['id'] in wanted]
+        missing = wanted - {p['id'] for p in all_pins}
+        if missing:
+            out.write(f"no such pin(s): {', '.join(sorted(missing))}\n")
+            return 2
+    if not all_pins:
+        out.write("no pins configured\n")
+        return 0
+    failures = 0
+    for pin in all_pins:
+        try:
+            lo, hi, lines = pins_mod.resolve(root, pin)
+        except pins_mod.PinError as e:
+            out.write(f"{pin['id']} {pin['file']}: {e}\n")
+            failures += 1
+            continue
+        preview = next((l.strip() for l in
+                        pins_mod.span_text(lines, lo, hi).splitlines()
+                        if l.strip()), '')
+        if len(preview) > 72:
+            preview = preview[:69] + '...'
+        out.write(f"{pin['id']} {pin['file']}:{lo}-{hi}  {preview}\n")
+    return 1 if failures else 0
