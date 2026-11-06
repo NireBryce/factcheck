@@ -37,9 +37,11 @@ SEE = ("regenerate with `factcheck fix-contents <page>`")
 # that has already been made: a `-history.md` page is exempt from needing
 # a *sibling* but still carries Contents like any other page, and one page
 # lost its block on the strength of exactly that confusion. Keep the two
-# lists apart and named for what they exempt.
+# lists apart and named for what they exempt. The lessons tree of the
+# repo this was extracted from used to sit here too; a default naming one
+# repo's layout belongs in that repo's config, and its tree has since
+# been renamed besides (#20).
 DEFAULT_EXEMPT = (
-    r'^wiki/agent-lessons-learned(\.md|/)',
     r'-for-agents\.md$',
 )
 

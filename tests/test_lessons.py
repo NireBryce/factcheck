@@ -1,8 +1,13 @@
 """lessons-index: entries, articles, numbering gaps and required fields,
-on fixture pages; plus a parity case run against the real index of the
-repo the check was generalized from, when that checkout is present."""
-import os
-import pathlib
+on fixture pages.
+
+There was also a parity case against the real index of the repo the
+check was generalized from, asserting it clean. That page was
+restructured upstream on 2026-09-27 -- inline `##` sections, with only
+long lessons as articles in the directory -- so it stopped being the
+shape this check models, and the case had no honest assertion left. The
+shape now lives only in fixtures; `examples/nixos-configs.toml` is the
+instrument that still points the check at the real repo."""
 import unittest
 
 from .helpers import Tree
@@ -71,8 +76,19 @@ class LessonsIndex(Tree):
         self.write('docs/lessons/Notes.md', 'x\n')
         self.write('docs/lessons/2-suspect-yourself-first.md', '# Two\n')
         self.write('docs/lessons/0-human-README.md', '# about\n')
-        self.assertEqual(self.tags(f'{REAL_1}\n{REAL_2}\n'), [
+        data = {'lessons': {'page': 'docs/lessons.md',
+                            'exempt': ['0-human-README.md']}}
+        self.assertEqual(self.tags(f'{REAL_1}\n{REAL_2}\n', data), [
             'LESSON ARTICLE NAME', 'LESSON ARTICLE TITLE'])
+
+    def test_no_exempt_by_default(self):
+        # The default exempt carried the source repo's 0-human-README.md;
+        # a default naming one repo's layout belongs in that repo's
+        # config, so without configuration every file in the dir must
+        # look like a lesson (#20).
+        self.write('docs/lessons/0-human-README.md', '# about\n')
+        self.assertEqual(self.tags(f'{REAL_1}\n{REAL_2}\n'),
+                         ['LESSON ARTICLE NAME'])
 
     def test_double_dash_separator_and_custom_fields(self):
         page = '- **#1** [T](lessons/1-success-is-not-tested.md) -- r. Why: x.\n'
@@ -131,24 +147,6 @@ class LessonsLayouts(Tree):
                    'Enforced: y.\n')
         self.assertEqual(self.run_check({'lessons': {'page': 'docs/l.md'}}),
                          ['LESSON FIELD'])
-
-
-SOURCE = pathlib.Path(os.environ.get(
-    'FACTCHECK_LESSONS_PARITY_REPO', '/nonexistent'))
-
-
-@unittest.skipUnless((SOURCE / 'wiki/agent-lessons-learned.md').is_file(),
-                     'set FACTCHECK_LESSONS_PARITY_REPO to a nixos-configs '
-                     'checkout to run the parity case')
-class Parity(unittest.TestCase):
-    """The real index the check was generalized from: clean today."""
-
-    def test_source_index_is_clean(self):
-        from factcheck.config import Config
-        cfg = Config(SOURCE, {'lessons': {
-            'page': 'wiki/agent-lessons-learned.md',
-            'dir': 'wiki/agent-lessons-learned'}})
-        self.assertEqual(lessons.check_lessons_index(SOURCE, cfg), [])
 
 
 if __name__ == '__main__':
