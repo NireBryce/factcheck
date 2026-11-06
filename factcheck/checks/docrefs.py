@@ -111,9 +111,9 @@ def check_docrefs(root, cfg):
     nouns = s.get('count-nouns',
                   ['files', 'modules', 'subdirectories', 'hosts', 'recipes',
                    'skills'])
-    exempt = [re.compile(rx) for rx in s.get(
-        # No default naming the repo this was extracted from (#20).
-        'exempt', [r'-history\.md$'])]
+    # No default beyond empty: the source repo's lessons tree and
+    # -history pages both used to sit here (#20).
+    exempt = [re.compile(rx) for rx in s.get('exempt', ())]
     skills_dirs = cfg.section('skills').get('dirs', ['.agents/skills'])
     skills_dir = root / skills_dirs[0]
 
