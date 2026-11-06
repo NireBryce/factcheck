@@ -60,22 +60,41 @@ pipx install git+https://github.com/NireBryce/factcheck
 ./bin/factcheck fix-refs dry-run        # after `git mv`: what references it would rewrite
 ```
 
-With no `factcheck.toml`, the `docs` and `pages` scopes are every
+With no config file, the `docs` and `pages` scopes are every
 non-symlink markdown file under the root (never under `.git`). Most real
 repos want explicit scopes:
 
 ```toml
-# factcheck.toml
+# .agents/factcheck
 [scopes]
 docs = ["docs/**/*.md", "README.md", "CONTRIBUTING.md"]
 pages = ["docs/**/*.md"]
+# drop paths from every scope; `<scope>-exclude` drops them from one:
+exclude = ["**/generated/**"]
 
 [recipes]
 justfile = "Justfile"
 
+[checks]
+# a check switched off is a decision, recorded here; a name nothing
+# answers to is an error, like --skip
+disabled = []
+
 [plugins]
 load = ["plugins/my-checks.py"]
 ```
+
+The config file is `<root>/.agents/factcheck`, in TOML — hand-editable,
+commentable, and the only config language a stdlib-only tool can offer
+(#21). The root-level `factcheck.toml` the tool originally used is still
+read when the new location has no file, so pinned checkouts and their
+configs migrate independently. Scope patterns and excludes match with
+the same glob language rule files use: `**/` spans directories, `*` and
+`?` stay in one segment, `{a,b}` alternates, brackets are literal.
+
+Plugins are enabled and disabled entirely from this file: a module only
+runs when `[plugins] load` lists it, so a plugin you stop listing is
+switched off — no separate flag.
 
 ## The checks
 
