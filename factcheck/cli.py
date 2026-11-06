@@ -133,6 +133,16 @@ def _run_checks(cmd, root, cfg, skip, out):
         return 2
     all_findings = []
     no_git = []
+    # A check named as the command while switched off would fall through
+    # the loop and read as "no findings" -- a false claim, the wrong-repo
+    # green in miniature. The aggregate stays silent (the config is the
+    # record); a direct invocation is refused loudly, like a check that
+    # could not run.
+    if cmd != 'check' and (cmd in disabled or cmd in skip):
+        how = ('[checks] disabled' if cmd in disabled else '--skip')
+        out.write(f"{cmd}: switched off by {how} -- refusing to report a "
+                  f"findings-less pass; remove it there or run `check`\n")
+        return 2
     for name, c in registry.registered():
         if cmd not in (name, 'check') or name in skip or name in disabled:
             continue

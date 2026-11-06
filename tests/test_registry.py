@@ -195,14 +195,21 @@ class Cli(unittest.TestCase):
         self.assertIn('unknown check(s) in [checks] disabled', outtext)
         self.assertIn('nope-check', outtext)
 
-    def test_config_disabled_known_names_are_skipped(self):
+    def test_single_check_of_disabled_check_is_refused(self):
+        # The aggregate skips disabled checks silently (the config is the
+        # record); naming the check directly must not fall through to a
+        # findings-less pass -- that is the wrong-repo green in
+        # miniature. Same refusal for --skip naming the command itself.
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
             cfg_file = pathlib.Path(tmp) / 'cfg.toml'
             cfg_file.write_text('[checks]\ndisabled = ["dates"]\n')
             code, outtext = self.run_cli('--config', str(cfg_file), 'dates')
-        self.assertEqual(code, 0)
-        self.assertIn('no findings', outtext)
+        self.assertEqual(code, 2)
+        self.assertIn('switched off by [checks] disabled', outtext)
+        code, outtext = self.run_cli('dates', '--skip=dates')
+        self.assertEqual(code, 2)
+        self.assertIn('switched off by --skip', outtext)
 
     def test_positional_repo_root_is_honored_not_dropped(self):
         # The edit hook calls `factcheck siblings <root>`; a silently
