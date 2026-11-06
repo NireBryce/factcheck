@@ -115,6 +115,7 @@ it (`plugins/readme_checks_table.py`).
 | `anchors` | every `#fragment` resolves to a real heading, slugged the way GitHub renders it, including `-1` dedup counters | scope `docs` |
 | `paths` | backticked filenames in the docs that name no git-tracked file, matched by suffix (`checks/links.py` finds `factcheck/checks/links.py`) after dropping `./`/`../`. REVIEW only: historical names kept to explain a rename are a legitimate reason a mention won't resolve. Opt-in; a line with `<!-- path-ok: reason -->` is skipped | scope `docs`, `[paths] enable, exts, ignore` |
 | `contents` | a page's `## Contents` list matches its own headings; a page that should have one has one | scope `pages`, `[contents] exempt` |
+| `pins` | every configured `[[pins]]` entry resolves to exactly one region of its file today — by 1-based `line`, by a `start`/`end` pair of literal per-line patterns, or by `heading` (+`level`) — and any `contains` text still sits inside the region; a selector matching more than one line resolves to nothing rather than to the first hit | config `[[pins]]` tables: `id`, `file`, one of `line` / `start`+`end` / `heading`, optional `level`, `contains`; tools `pin-gen`, `pin-show` |
 | `dates` | the `_Last modified: YYYY-MM-DD_` line exists right after the title, in exactly the configured shape, names a real date, and isn't in the future | scope `pages`, `[dates] line` |
 | `counts` | prose count claims — "all five hosts", "all three nixos hosts", "two of the three nixos hosts" — against actual counts | scope `docs`, `[counts] noun, classes, source, counters`, counters from plugins |
 | `generated` | every registered generated region exists on its home page and renders exactly what its source produces today; hand-written columns are carried per row, and a new row's empty hand cell is a finding until filled | regions registered by plugins |
@@ -157,6 +158,34 @@ names the check, never with a traceback. After the findings, one
 a `--skip` name that matches no check is an error, not a no-op. Checks can
 also declare capability needs (`needs=("nix",)`) and are skipped, loudly,
 where the capability is missing.
+
+## Pins
+
+External tests and tooling that cite a region of prose shouldn't pin line
+numbers: any edit invalidates them. A pin names the region by structure
+instead — one `[[pins]]` entry per region in the config file:
+
+```toml
+[[pins]]
+id = "install-steps"
+file = "README.md"
+start = "## Install"
+end = "## Uninstall"
+contains = "pipx install"   # optional tripwire: must sit inside the region
+```
+
+`heading` (+ optional `level`) selects a section the way the renderer
+nests it; a heading inside a fenced code block is never one. The `pins`
+check makes a pin that no longer resolves, matches more than one line, or
+whose `contains` text vanished a hard finding, so a reference that would
+silently point somewhere else fails loudly instead. Generate pins from
+today's file (`--write` appends to the config) and read their current
+resolutions:
+
+```sh
+./bin/factcheck pin-gen README.md --id install-steps --heading Install
+./bin/factcheck pin-show              # id file:lo-hi, one line per pin
+```
 
 ## Plugins
 
