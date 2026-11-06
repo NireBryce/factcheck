@@ -11,7 +11,7 @@ Layout:
 
 - `registry`   the `@check` registry; registration is the subcommand table
 - `findings`   the Finding model: tags, soft REVIEW findings, see-advice
-- `config`     factcheck.toml: file scopes, per-check bindings, plugins
+- `config`     the config file (.agents/factcheck): file scopes, per-check bindings, plugins
 - `mdcore`     markdown mechanics: fences, headings, GitHub slugs
 - `checks`     the built-in checks
 - `plugins`    loading out-of-tree check modules, which register via `@check`

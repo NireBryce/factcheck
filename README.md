@@ -86,7 +86,7 @@ load = ["plugins/my-checks.py"]
 
 The config file is `<root>/.agents/factcheck`, in TOML — hand-editable,
 commentable, and the only config language a stdlib-only tool can offer
-(#21). The root-level `factcheck.toml` the tool originally used is still
+(#21). The root-level `factcheck.toml` the tool originally used is still <!-- path-ok: the legacy name, the sentence is about it -->
 read when the new location has no file, so pinned checkouts and their
 configs migrate independently. Scope patterns and excludes match with
 the same glob language rule files use: `**/` spans directories, `*` and
@@ -204,7 +204,7 @@ disappear at the switch:
 |---|---|
 | links, anchors, contents + gen-contents, dates, siblings, recipes, skills, docrefs, counts, skill-files, rules, summaries, generated | **factcheck core now** |
 | lessons (index half) | **factcheck core** as `lessons-index`, since it stopped being repo-specific (an example plugin until then) |
-| imports/table (+ the static tree reading), secrets, routes, generated region instances | **plugins in that repo** (its `tools/docchecks/`, wired by its own `factcheck.toml`) since the switch; `examples/nixos-plugins/` keeps the copies they started from, as worked examples, and may lag the live ones |
+| imports/table (+ the static tree reading), secrets, routes, generated region instances | **plugins in that repo** (its `tools/docchecks/`, wired by its own `factcheck.toml` <!-- path-ok: that repo's own file, not ours -->) since the switch; `examples/nixos-plugins/` keeps the copies they started from, as worked examples, and may lag the live ones |
 | lessons (the lessons-map half) | **stays repo-carried, deliberately**: the map's glob semantics is a single shared module three readers there import so they cannot disagree; an example copy here would be exactly the duplicate the contract exists to prevent |
 
 Verified: on a copy of that repo, factcheck and check_docs.py produce

@@ -14,7 +14,8 @@ class FixerRoot(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name).resolve()
-        (self.root / 'factcheck.toml').write_text('[probe]\nseen = true\n')
+        (self.root / '.agents').mkdir()
+        (self.root / '.agents/factcheck').write_text('[probe]\nseen = true\n')
         (self.root / 'page.md').write_text('# p\n')
         self.seen = {}
 

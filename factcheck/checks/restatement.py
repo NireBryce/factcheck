@@ -128,7 +128,8 @@ def check_restatement(root, cfg):
         exempt = [(re.compile(a), re.compile(b))
                   for a, b in s.get('exempt-pairs', [])]
     except (TypeError, ValueError, re.error) as e:
-        return [Finding('BAD CONFIG', 'factcheck.toml',
+        return [Finding('BAD CONFIG',
+                        str(cfg.source) if cfg.source else 'config',
                         f"[restatement] exempt-pairs must be a list of "
                         f"[regex, regex] pairs: {e}")]
     files = {p.relative_to(root).as_posix(): words_of(p.read_text())
