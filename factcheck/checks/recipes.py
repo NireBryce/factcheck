@@ -24,6 +24,27 @@ JUST_MENTION = re.compile(r'`just ([^`]+)`')
 
 SEE = "a rename left a reference behind: fix the doc or restore the recipe"
 
+# The default names just itself searches for, in its own search order --
+# read from just 1.58.0's src/search.rs (`JUSTFILE_NAMES`), where each
+# directory entry is matched with `eq_ignore_ascii_case`, so `Justfile`
+# and friends are found too. `justfile` is just's own first choice, so a
+# repo using it without configuration must not read as one that doesn't
+# use just. Where just errors on two candidates in one directory
+# (MultipleCandidates), this picks the first name's match; a doc checker
+# need not refuse to run over the ambiguity.
+JUSTFILE_NAMES = ('justfile', '.justfile')
+
+
+def find_justfile(root):
+    """The justfile just would use in `root` with nothing configured, or
+    None -- the first of `justfile`/`.justfile` (ASCII-case-insensitive)
+    that exists there."""
+    for name in JUSTFILE_NAMES:
+        for entry in sorted(root.iterdir()):
+            if entry.is_file() and entry.name.lower() == name:
+                return entry
+    return None
+
 
 def justfile_recipes(path):
     """Recipe names plus module names from a justfile."""
@@ -39,8 +60,8 @@ def check_recipes(root, cfg):
     but missing is a finding; no configuration and no justfile is a repo
     that doesn't use just -- nothing to check."""
     rel = cfg.section('recipes').get('justfile')
-    jf = root / (rel or '.justfile')
-    if not jf.exists():
+    jf = root / rel if rel else find_justfile(root)
+    if jf is None or not jf.exists():
         if rel:
             return [Finding('MISSING JUSTFILE', rel,
                             f"configured justfile does not exist")]

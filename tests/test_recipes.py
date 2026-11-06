@@ -63,6 +63,24 @@ class Recipes(Tree):
         f = self.findings({'recipes': {'justfile': '.justfile'}})
         self.assertEqual([x.tag for x in f], ['MISSING JUSTFILE'])
 
+    def test_unqualified_default_justfile_is_found(self):
+        # `justfile` is just's own first-choice default name; a repo using
+        # it with nothing configured used to get no check at all.
+        self.root.joinpath('.justfile').unlink()
+        self.write('justfile', JUSTFILE)
+        self.write('docs/guide.md', 'run `just build` or `just gone`.\n')
+        f = self.findings()
+        self.assertEqual([x.tag for x in f], ['UNKNOWN RECIPE'])
+        self.assertIn("'gone'", f[0].message)
+
+    def test_default_name_matches_case_insensitively(self):
+        # just matches directory entries with eq_ignore_ascii_case
+        # (src/search.rs, just 1.58.0), so `Justfile` is a justfile.
+        self.root.joinpath('.justfile').unlink()
+        self.write('Justfile', JUSTFILE)
+        self.write('docs/guide.md', 'run `just build`.\n')
+        self.assertEqual(self.findings(), [])
+
     def test_justfile_location_is_configurable(self):
         self.write('tools/Justfile', 'deploy:\n    true\n')
         self.write('docs/guide.md', 'run `just deploy`.\n')
