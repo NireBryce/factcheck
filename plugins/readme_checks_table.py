@@ -7,7 +7,7 @@ describes it; a check that is removed loses its row. The two prose
 columns, what it checks and what config binds it, are hand-written and
 kept per row.
 
-Loaded through factcheck.toml's `[plugins]`, so it applies to this repo
+Loaded through .agents/factcheck's `[plugins]`, so it applies to this repo
 only: a consumer's run never sees it. Regenerate with
 `factcheck fix-generated README.md`.
 """

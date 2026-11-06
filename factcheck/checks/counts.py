@@ -54,7 +54,7 @@ def _num(word):
 
 def _counter_value(name, root, cfg):
     # Config declares win over registered plugins: an explicit number in
-    # factcheck.toml is the repo's word over whatever a plugin guesses.
+    # the config file is the repo's word over whatever a plugin guesses.
     declared = cfg.section('counts').get('counters', {}).get(name)
     if isinstance(declared, int):
         return declared

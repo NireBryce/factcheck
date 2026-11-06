@@ -81,12 +81,22 @@ class Ordering(unittest.TestCase):
 
 
 class Cli(unittest.TestCase):
+    def setUp(self):
+        # Dispatch tests get an empty config by default: this repo's own
+        # config (scopes, disabled names, plugins) would otherwise leak
+        # into a `check` run that is only testing dispatch -- and strict
+        # `disabled` validation fails those runs once the registry is
+        # cleared by the test. A test passing --config explicitly wins.
+        import tempfile
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self._empty_cfg = pathlib.Path(self._tmp.name) / 'empty.toml'
+        self._empty_cfg.write_text('')
+
     def run_cli(self, *args):
         out = io.StringIO()
-        # Root pinned to this repo: cwd may be any project, whose
-        # factcheck.toml (plugins, scopes) would otherwise leak into a
-        # `check` run that is only testing dispatch.
-        code = cli.main(['--root', str(REPO_ROOT), *args], out=out)
+        extra = () if '--config' in args else ('--config', str(self._empty_cfg))
+        code = cli.main(['--root', str(REPO_ROOT), *extra, *args], out=out)
         return code, out.getvalue()
 
     def test_unknown_subcommand_exits_2(self):
@@ -171,6 +181,29 @@ class Cli(unittest.TestCase):
             registry.CHECKS.clear()
             registry.CHECKS.update(saved)
 
+    def test_config_disabled_names_are_strict(self):
+        # [checks] disabled validates like --skip now: a name nothing
+        # answers to stops the run naming itself, instead of silently
+        # doing nothing (#21). The --config file replaces the repo's own,
+        # so this runs on this repo without its plugins.
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg_file = pathlib.Path(tmp) / 'cfg.toml'
+            cfg_file.write_text('[checks]\ndisabled = ["nope-check"]\n')
+            code, outtext = self.run_cli('--config', str(cfg_file), 'check')
+        self.assertEqual(code, 2)
+        self.assertIn('unknown check(s) in [checks] disabled', outtext)
+        self.assertIn('nope-check', outtext)
+
+    def test_config_disabled_known_names_are_skipped(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg_file = pathlib.Path(tmp) / 'cfg.toml'
+            cfg_file.write_text('[checks]\ndisabled = ["dates"]\n')
+            code, outtext = self.run_cli('--config', str(cfg_file), 'dates')
+        self.assertEqual(code, 0)
+        self.assertIn('no findings', outtext)
+
     def test_positional_repo_root_is_honored_not_dropped(self):
         # The edit hook calls `factcheck siblings <root>`; a silently
         # ignored positional made the check scan the harness's cwd and
@@ -195,11 +228,10 @@ class Cli(unittest.TestCase):
             capture_output=True, text=True)
         self.assertEqual(r.returncode, 2)
 
-    def test_config_disabled_check_does_not_run_and_is_not_an_error(self):
-        # Unlike --skip (validated strictly -- a typo should stop the run),
-        # config `disabled` may name a check that isn't registered in this
-        # run at all, and says nothing when it fires.
-        import contextlib
+    def test_config_disabled_unknown_name_exits_2(self):
+        # `disabled` validates like --skip now: a name nothing answers to
+        # is a stale decision the run must surface, not silently drop
+        # (#21). A known name still skips its check without a word.
         import tempfile
         from factcheck.config import Config
         saved = dict(registry.CHECKS)
@@ -216,9 +248,31 @@ class Cli(unittest.TestCase):
                 buf = io.StringIO()
                 code = cli._run_checks('check', pathlib.Path(tmp), cfg,
                                        set(), buf)
+            self.assertEqual(code, 2)
+            self.assertIn('not-registered-here', buf.getvalue())
+        finally:
+            registry.CHECKS.clear()
+            registry.CHECKS.update(saved)
+
+    def test_config_disabled_known_name_skips_silently(self):
+        import tempfile
+        from factcheck.config import Config
+        saved = dict(registry.CHECKS)
+        try:
+            registry.CHECKS.clear()
+
+            def bad(root, cfg):
+                from factcheck.findings import Finding
+                return [Finding('BAD', 'x', 'always')]
+            registry.check('zz-bad')(bad)
+            with tempfile.TemporaryDirectory() as tmp:
+                cfg = Config(pathlib.Path(tmp),
+                             {'checks': {'disabled': ['zz-bad']}})
+                buf = io.StringIO()
+                code = cli._run_checks('check', pathlib.Path(tmp), cfg,
+                                       set(), buf)
             self.assertEqual(code, 0)
             self.assertNotIn('BAD', buf.getvalue())
-            self.assertNotIn('skipped', buf.getvalue())
         finally:
             registry.CHECKS.clear()
             registry.CHECKS.update(saved)

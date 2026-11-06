@@ -39,7 +39,8 @@ commands:
 
 global options:
   --root PATH          repository to check (default: cwd)
-  --config PATH        factcheck.toml location (default: <root>/factcheck.toml)
+  --config PATH        config file location (default: <root>/.agents/factcheck;
+                       legacy <root>/factcheck.toml still read)
   --skip=a,b           leave named checks out of `check`
 """
 
@@ -97,11 +98,15 @@ def _run_checks(cmd, root, cfg, skip, out):
         out.write(f"unknown command {cmd!r} -- try `factcheck checks`\n")
         return 2
 
-    # `disabled` comes from config and is validated loosely: a config may
-    # disable a check that isn't registered in this run (its plugin isn't
-    # loaded here, say) without that being an error. `--skip` names are
-    # validated strictly: a typo there should stop the run, not no-op it.
+    # `disabled` is validated strictly too, like --skip: the config
+    # records decisions, and a name nothing answers to is a stale
+    # decision the run should surface, not silently drop. It sits after
+    # plugins.load (cli.main), so plugin-registered names are legal here.
     disabled = cfg.disabled()
+    if (unknown := disabled - set(registry.names())):
+        out.write(f"unknown check(s) in [checks] disabled: "
+                  f"{sorted(unknown)}\n")
+        return 2
     all_findings = []
     no_git = []
     for name, c in registry.registered():
@@ -227,7 +232,7 @@ def main(argv=None, out=None):
     # call with. It must never be silently dropped: a root that stays
     # cwd makes the check scan the wrong repository and exit 0.
     # A fixer's arguments are its files, never the root: taking the first
-    # one as the root would load config from `<page>/factcheck.toml`.
+    # one as the root would load config from `<page>/.agents/factcheck`.
     root_arg = (positional[1] if len(positional) > 1
                 and cmd not in fixers.FIXERS else None)
     root = Path(root_override or root_arg or Path.cwd()).resolve()

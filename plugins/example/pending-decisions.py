@@ -3,7 +3,7 @@ pattern in the docs scope -- the smallest real shape of a repo-specific
 check: "this project's docs make a claim shape my repo cares about; here
 is the lookup and here is the tag."
 
-Register it by listing the file in the target repo's factcheck.toml:
+Register it by listing the file in the target repo's .agents/factcheck:
 
     [plugins]
     load = ["plugins/example/pending-decisions.py"]

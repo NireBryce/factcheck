@@ -1,5 +1,5 @@
 """Shared fixture plumbing: a temp tree with a `write` helper, and a Config
-built from a plain dict (the same shape factcheck.toml parses to)."""
+built from a plain dict (the same shape the config file parses to)."""
 import os
 import pathlib
 import re
