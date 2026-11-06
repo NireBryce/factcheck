@@ -90,8 +90,26 @@ class DocRefs(Tree):
         self.assertEqual(self.findings(), [])
 
     def test_exempt_paths_skip_bare_counts(self):
+        # The -history exempt used to be a default; now it is a
+        # consumer's decision (#20).
         self.write('wiki/thing-history.md', 'six modules moved here.\n')
-        self.assertEqual(self.findings(), [])
+        self.assertEqual(self.findings(
+            {'docrefs': {'exempt': ['-history\\.md$']}}), [])
+
+
+class Defaults(Tree):
+    def findings(self, data=None):
+        return docrefs.check_docrefs(self.root, self.cfg(data))
+
+    def test_history_pages_are_no_longer_exempt_by_default(self):
+        # A `-history.md` page's bare count is a finding now: the
+        # -history default exempt rode in from the source repo (#20),
+        # and `exempt` gates BARE COUNT findings.
+        self.write('wiki/thing-history.md', 'six modules moved here.\n')
+        f = self.findings()
+        self.assertEqual([x.tag for x in f], ['BARE COUNT'])
+        f = self.findings({'docrefs': {'exempt': ['-history\.md$']}})
+        self.assertEqual(f, [])
 
 
 if __name__ == '__main__':

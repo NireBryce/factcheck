@@ -1,6 +1,8 @@
 """siblings: the staleness guard, the reviewed-line escape hatch, the
 budget REVIEW, and the missing/orphan/link halves."""
 import datetime
+import unittest
+
 from .helpers import Tree
 
 from factcheck.checks import siblings
@@ -108,8 +110,14 @@ class Siblings(Tree):
         self.assertEqual(self.findings(), [])
 
     def test_history_pages_exempt_from_requiring_a_sibling(self):
+        # The -history exempt used to be a default; now it is a
+        # consumer's decision (#20).
         self.write('wiki/long-history.md', page(OLD, LONG_BODY))
-        self.assertEqual(self.findings(), [])
+        self.assertEqual(
+            self.findings({'siblings': {'exempt': ['-history\\.md$']}}), [])
+        f = self.findings()
+        self.assertEqual(len(f), 1)
+        self.assertEqual(f[0].tag, 'MISSING SIBLING')
 
     def test_budget_overrun_is_review_not_hard(self):
         self.write_pair(OLD, OLD, sib_text=(
@@ -139,6 +147,16 @@ class Siblings(Tree):
             self.root / 'wiki/guide-dense.md')
         self.assertEqual(
             self.findings({'siblings': {'suffix': '-dense'}}), [])
+
+
+class Defaults(unittest.TestCase):
+    """The exempt list is a consumer's decision, not the tool's: the
+    source repo's lessons tree and -history pages both used to ride in
+    as defaults (#20)."""
+
+    def test_default_exempt_is_empty(self):
+        from factcheck.checks.siblings import DEFAULT_EXEMPT
+        self.assertEqual(DEFAULT_EXEMPT, ())
 
 
 if __name__ == '__main__':
