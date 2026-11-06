@@ -14,7 +14,7 @@
 > [nixos-configs](https://github.com/NireBryce/nixos-configs)' agent
 > tooling, the repo factcheck was extracted from. A rule here citing
 > "§N" points at that repo's
-> [lessons index](https://github.com/NireBryce/nixos-configs/blob/experimental/wiki/agent-lessons-learned.md),
+> [lessons index](https://github.com/NireBryce/nixos-configs/blob/experimental/wiki/lessons-learned.md),
 > where the account of the mistake behind it lives.
 
 ## What this is

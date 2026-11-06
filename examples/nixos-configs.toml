@@ -7,6 +7,11 @@
 # own copy of this config would then live at its root, with the plugin
 # paths in-repo). Sections left out fall back to the tool's defaults,
 # which are this repo's conventions.
+#
+# Paths below follow nixos-configs@experimental as of 2026-11-05: the
+# wiki was restructured (config-structure/categories -> categories),
+# the homelab-config module area folded into general-config, and the
+# lessons tree renamed agent-lessons-learned -> lessons-learned.
 
 [scopes]
 docs = ["wiki/**/*.md", "AGENTS.md", ".agents/rules/**/*.md"]
@@ -16,14 +21,14 @@ pages = ["wiki/**/*.md"]
 line = '_Last modified: {date}_'
 
 [contents]
-exempt = ['^wiki/agent-lessons-learned(\.md|/)', '-for-agents\.md$']
+exempt = ['^wiki/lessons-learned(\.md|/)', '-for-agents\.md$']
 
 [siblings]
 suffix = "-for-agents"
 required-words = 1000
 budget = 0.5
 fold-heading = "Quick facts"
-exempt = ['^wiki/agent-lessons-learned(\.md|/)', '-history\.md$']
+exempt = ['^wiki/lessons-learned(\.md|/)', '-history\.md$']
 
 [recipes]
 justfile = ".justfile"
@@ -35,6 +40,7 @@ dirs = [".agents/skills"]
 # path is a finding. Adding a future move is one line here.
 [docrefs]
 moved-dirs = { ".claude/hooks" = ".agents/hooks" }
+exempt = ['^wiki/lessons-learned', '-history\.md$']
 
 # The fleet's plugins: the static tree reader, the membership checks
 # built on it, the two set-claim checks, and the
@@ -57,42 +63,38 @@ name-prefix = "nire-"
 
 [tree]
 modules = "flake/modules"
-areas = ["general-config", "hardware-config", "homelab-config", "users-config"]
+areas = ["general-config", "packages-config", "host-config", "users-config"]
 hosts-file = "flake/modules/host-config/hosts.nix"
 host-config-dir = "flake/modules/host-config"
 name-prefix = "nire-"
 host-constructors = { nixos = "mkHost", darwin = "mkDarwinHost" }
 
 [imports]
-pages-dir = "wiki/config-structure/categories"
+pages-dir = "wiki/categories"
 class-label = "NixOS"
-index-page = "wiki/config-structure/categories/00-INDEX.md"
+index-page = "wiki/categories/00-INDEX.md"
 
 [secrets]
 file = "flake/modules/general-config/system/secrets/.sops.yaml"
 name-prefix = "nire-"
 
 [routes]
-sources = ["flake/modules/homelab-config/homelab/reverse-proxy/caddy/caddy.nix",
-           "wiki/config-structure/categories/reverse-proxy-history.md"]
+sources = ["flake/modules/general-config/homelab/reverse-proxy/caddy/caddy.nix",
+           "wiki/categories/reverse-proxy-history.md"]
 base-domain = "ts-cube.moose-micro.ts.net"
 
 # Read by the built-in `lessons-index` check (once an example plugin).
+# The page itself was restructured upstream on 2026-09-27 -- inline
+# `##` sections, only long lessons as articles -- so the check reports
+# every number without an article; kept as the config-key example.
 [lessons]
-page = "wiki/agent-lessons-learned.md"
-dir = "wiki/agent-lessons-learned"
+page = "wiki/lessons-learned.md"
+dir = "wiki/lessons-learned"
 
 [regions]
 flake = "flake"
-homelab = "homelab-config/homelab"
-pages-dir = "wiki/config-structure/categories"
+homelab = "general-config/homelab"
+pages-dir = "wiki/categories"
 tailnet-template = "ts-{short}"
 wipes-import = "impermanence"
 
-# The lessons-map half of `lessons` is not in the example plugin: its
-# glob semantics is a single shared module three readers in
-# nixos-configs import so they cannot disagree. Until the flip, the
-# in-repo checker still validates the map, so the plugin's half is
-# disabled here to avoid double-reporting the index.
-[checks]
-disabled = ["lessons"]
