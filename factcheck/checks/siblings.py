@@ -38,9 +38,10 @@ SYNC_SEE = ("the source was edited without its condensed sibling following; "
 REVIEWED_LINE = re.compile(
     r'^_Sibling reviewed: (\d{4}-\d{2}-\d{2})\s*(?:--|—)\s*(\S.*?)_\s*$')
 
-# Exempt from *requiring* a sibling (each may still have one).
+# Exempt from *requiring* a sibling (each may still have one). The
+# lessons tree of the repo this was extracted from used to sit here too;
+# a default naming one repo's layout belongs in that repo's config (#20).
 DEFAULT_EXEMPT = (
-    r'^wiki/agent-lessons-learned(\.md|/)',
     r'-history\.md$',
 )
 

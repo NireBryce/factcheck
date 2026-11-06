@@ -112,7 +112,8 @@ def check_docrefs(root, cfg):
                   ['files', 'modules', 'subdirectories', 'hosts', 'recipes',
                    'skills'])
     exempt = [re.compile(rx) for rx in s.get(
-        'exempt', [r'^wiki/agent-lessons-learned', r'-history\.md$'])]
+        # No default naming the repo this was extracted from (#20).
+        'exempt', [r'-history\.md$'])]
     skills_dirs = cfg.section('skills').get('dirs', ['.agents/skills'])
     skills_dir = root / skills_dirs[0]
 

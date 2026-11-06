@@ -20,8 +20,10 @@ Config (`[lessons]`):
     [lessons]
     page = "docs/lessons-learned.md"           # required to enable
     dir = "docs/lessons-learned"               # default: page minus .md
-    exempt = ["0-human-README.md"]             # files in dir that aren't lessons;
-                                               # setting it replaces this default
+    exempt = ["NOTES.md"]                      # files in dir that aren't lessons;
+                                               # default: none -- the source repo's
+                                               # 0-human-README.md went back to its
+                                               # own config (#20)
     fields = ["Home", "Enforced"]              # each entry must carry `<f>: `
     marker = "§"                               # the number's prefix
 
@@ -54,7 +56,7 @@ def check_lessons_index(root, cfg):
         return []
     dir_rel = s.get('dir', page_rel[:-3] if page_rel.endswith('.md')
                     else page_rel).rstrip('/')
-    exempt = set(s.get('exempt', ['0-human-README.md']))
+    exempt = set(s.get('exempt', ()))
     fields = s.get('fields', ['Home', 'Enforced'])
     marker = s.get('marker', '§')
     page = root / page_rel
