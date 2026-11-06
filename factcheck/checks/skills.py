@@ -14,14 +14,22 @@ SKILL_MENTION = re.compile(r'[Ss]kill `([a-zA-Z][\w-]*)`|`([a-zA-Z][\w-]*)` skil
 SEE = "a rename left a reference behind: fix the doc or rename the skill back"
 
 
-@check('skills', order=40)
-def check_skills(root, cfg):
+def skill_dirs(root, cfg):
+    """({skill name: directory}, the configured `[skills] dirs`); shared
+    with the checks that resolve a skill name (`lessons-index` in table
+    shape)."""
     dirs = cfg.section('skills').get('dirs', ['.agents/skills'])
-    real = set()
+    real = {}
     for d in dirs:
         sd = root / d
         if sd.is_dir():
-            real |= {p.name for p in sd.iterdir() if p.is_dir()}
+            real.update({p.name: p for p in sd.iterdir() if p.is_dir()})
+    return real, dirs
+
+
+@check('skills', order=40)
+def check_skills(root, cfg):
+    real, dirs = skill_dirs(root, cfg)
 
     findings = []
     for path in cfg.scope('docs'):

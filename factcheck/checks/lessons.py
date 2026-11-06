@@ -15,6 +15,23 @@ field exists, so an entry can't land without saying where its rule lives.
 Opt-in: a repo without `[lessons] page` gets a vacuous pass, because the
 shape is a convention, not a default every repo follows.
 
+A repo may instead keep its lessons as one table (`shape = "table"`), one
+row per lesson:
+
+    | Lesson | Rule | Home |
+    |---|---|---|
+    | ... | test a checker against a case it should catch | AGENTS.md; skill `ship` |
+
+Every row must have a non-empty Home, and every skill (`skill `x``) and
+repo path (`` `src/x.py` ``) the Home names must resolve, by the same
+lookups as `skills` and `paths`. Those are hard findings, because a Home
+is where the rule is supposed to live. On top of that, a REVIEW when the
+Home's files share none of the rule's distinctive terms (words of six or
+more letters, compared on their first six letters, minus a stopword
+list): the Home exists but may never have been given the rule. A lead for
+a human, not a claim; a rule with fewer than two distinctive terms is not
+judged. A name given beside a path in a Home is left to `symbol-refs`.
+
 Config (`[lessons]`):
 
     [lessons]
@@ -26,6 +43,12 @@ Config (`[lessons]`):
                                                # own config (#20)
     fields = ["Home", "Enforced"]              # each entry must carry `<f>: `
     marker = "§"                               # the number's prefix
+    shape = "index"                            # or "table" (see above)
+    columns = ["Lesson", "Rule", "Home"]       # table shape: the header cells
+    rule-column = "Rule"                       # table shape: which columns
+    home-column = "Home"                       #   hold the rule and its Home
+    min-overlap = 1                            # table shape: REVIEW below this
+                                               #   many shared terms
 
 Generalized from the index half of the lessons check in the repo
 factcheck was extracted from; that repo keeps the other half (its
@@ -35,7 +58,11 @@ import posixpath
 import re
 
 from ..findings import Finding
+from ..gitfiles import NotAGitCheckout, tracked_files
+from ..mdcore import fences
 from ..registry import check
+from .paths import DEFAULT_EXTS, all_suffixes, mention_rx, resolves
+from .skills import SKILL_MENTION, skill_dirs
 
 ARTICLE = re.compile(r'^(\d+)-[a-z0-9-]+\.md$')
 # The entry separator: an em dash, or `--` where the page avoids one.
@@ -61,9 +88,16 @@ def check_lessons_index(root, cfg):
     marker = s.get('marker', '§')
     page = root / page_rel
     art_dir = root / dir_rel
+    shape = s.get('shape', 'index')
+    if shape not in ('index', 'table'):
+        return [Finding('LESSONS SHAPE', page_rel,
+                        f'[lessons] shape is "{shape}", not "index" or '
+                        '"table"')]
     if not page.is_file():
         return [Finding('MISSING LESSONS PAGE', page_rel,
                         '[lessons] page names no file')]
+    if shape == 'table':
+        return table_findings(root, cfg, page_rel)
     # Links on the page are relative to it, so an entry's link starts with
     # the article directory as seen from the page (`../wiki/arts/` from
     # `docs/`); a leading `./` on the link is ignored.
@@ -127,4 +161,132 @@ def check_lessons_index(root, cfg):
         if n not in articles:
             findings.append(Finding(
                 'MISSING ARTICLE', dir_rel, f"no {n}-*.md for {marker}{n}"))
+    return findings
+
+
+# --- table shape ---------------------------------------------------------
+
+STOPWORDS = frozenset("""
+    about after against always another because before between cannot could
+    during either every except further having itself maybe never other
+    rather should simply since still their there these thing things those
+    through under until using where whether which while without would
+    """.split())
+TERM = re.compile(r'[A-Za-z]{6,}')
+STEM = 6
+SEP_ROW = re.compile(r'^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$')
+TABLE_SEE = ("a lessons-table Home that holds no trace of the rule: add the "
+             "rule to the Home, or point the row at where it lives")
+
+
+def split_row(line):
+    """The cells of a GFM table row: split on pipes not escaped with a
+    backslash, outer pipes dropped, `\\|` read as a literal pipe."""
+    body = line.strip()
+    body = body[1:] if body.startswith('|') else body
+    if body.endswith('|') and not body.endswith('\\|'):
+        body = body[:-1]
+    return [c.strip().replace('\\|', '|')
+            for c in re.split(r'(?<!\\)\|', body)]
+
+
+def terms(text):
+    """A text's distinctive terms: words of six or more letters, lowered,
+    stopwords out, cut to their first six letters so an inflection
+    (`redact`, `redaction`) still matches."""
+    return {w.lower()[:STEM] for w in TERM.findall(text)
+            if w.lower() not in STOPWORDS}
+
+
+def find_table(text, columns):
+    """[(lineno, cells)] for the data rows of the first table outside a
+    fence whose header cells equal `columns`; None when there is none."""
+    lines = [(n, line) for n, line, kind in fences.scan_lines(text)
+             if kind == fences.TEXT]
+    for i, (_, line) in enumerate(lines):
+        if '|' not in line or split_row(line) != columns:
+            continue
+        if i + 1 >= len(lines) or not SEP_ROW.match(lines[i + 1][1]):
+            continue
+        rows = []
+        for m, row in lines[i + 2:]:
+            if '|' not in row:
+                break
+            rows.append((m, split_row(row)))
+        return rows
+    return None
+
+
+def table_findings(root, cfg, page_rel):
+    s = cfg.section('lessons')
+    columns = s.get('columns', ['Lesson', 'Rule', 'Home'])
+    rule_col = s.get('rule-column', 'Rule')
+    home_col = s.get('home-column', 'Home')
+    min_overlap = s.get('min-overlap', 1)
+    if rule_col not in columns or home_col not in columns:
+        return [Finding('LESSONS SHAPE', page_rel,
+                        f'[lessons] columns lacks "{rule_col}" or '
+                        f'"{home_col}"')]
+    ri, hi = columns.index(rule_col), columns.index(home_col)
+    rows = find_table((root / page_rel).read_text(), columns)
+    if rows is None:
+        return [Finding('LESSON TABLE', page_rel,
+                        f'no table with the header | {" | ".join(columns)} |')]
+    skills, _ = skill_dirs(root, cfg)
+    findings = []
+    try:
+        tracked = set(tracked_files(root))
+    except NotAGitCheckout:
+        tracked = None
+        findings.append(Finding(
+            'LESSONS NEEDS GIT', page_rel,
+            "not a git checkout: Home paths are not resolved", review=True))
+    suffixes = all_suffixes(tracked) if tracked is not None else set()
+    path_rx = mention_rx(DEFAULT_EXTS)
+
+    for n, cells in rows:
+        where = f'{page_rel}:{n}'
+        if len(cells) != len(columns):
+            findings.append(Finding(
+                'MALFORMED LESSON', where,
+                f'{len(cells)} cells, header has {len(columns)}'))
+            continue
+        home, rule = cells[hi], cells[ri]
+        if not home:
+            findings.append(Finding(
+                'EMPTY HOME', where, f'no {home_col} for "{cells[0][:50]}"'))
+            continue
+        bodies = []
+        for m in SKILL_MENTION.finditer(home):
+            name = m.group(1) or m.group(2)
+            if name not in skills:
+                findings.append(Finding(
+                    'UNKNOWN HOME', where, f'skill `{name}` has no directory'))
+                continue
+            bodies += [p.read_text(errors='replace')
+                       for p in sorted(skills[name].rglob('*.md'))]
+        if tracked is not None:
+            for m in path_rx.finditer(home):
+                tok = m.group(1)
+                if not resolves(tok, tracked, suffixes):
+                    findings.append(Finding(
+                        'UNKNOWN HOME', where,
+                        f'`{tok}` names no tracked file'))
+                    continue
+                name = tok.lstrip('./')
+                for rel in (t for t in tracked
+                            if t == name or t.endswith('/' + name)):
+                    try:
+                        bodies.append((root / rel).read_text())
+                    except (OSError, UnicodeDecodeError):
+                        pass
+        rule_terms = terms(rule)
+        if bodies and len(rule_terms) >= 2:
+            shared = rule_terms & terms('\n'.join(bodies))
+            if len(shared) < min_overlap:
+                findings.append(Finding(
+                    'THIN HOME', where,
+                    f"the {home_col} shares {len(shared)} of the rule's "
+                    f"{len(rule_terms)} distinctive terms",
+                    review=True, see=TABLE_SEE))
     return findings
