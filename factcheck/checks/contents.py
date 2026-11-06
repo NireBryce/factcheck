@@ -14,9 +14,10 @@ nothing to list, and the fixer declines to write an empty block.
 
 `fix-contents` is the actual fix for every finding here (and for a broken
 anchor pointing at the page's own Contents block): it rewrites the block in
-place. It replaces ONLY the contiguous run of Contents bullet lines -- never
-"everything up to the next heading", which once silently deleted the intro
-prose that used to sit after the block, on every page that had any."""
+place. It replaces ONLY the contiguous run of Contents entry lines, indented
+ones included -- never "everything up to the next heading", which once
+silently deleted the intro prose that used to sit after the block, on every
+page that had any."""
 import re
 
 from ..findings import Finding
@@ -130,8 +131,28 @@ def _regenerate(root, cfg, file_arg):
         i = 0
         while i < len(lines) and lines[i].strip() == '':
             i += 1
-        while i < len(lines) and CONTENTS_ITEM_LINE.match(lines[i]):
-            i += 1
+        while i < len(lines):
+            # An entry at any indentation is part of the run: the block
+            # lists `##` headings only, so a hand-written indented entry
+            # for a `###` heading that survived the rewrite would list its
+            # section twice and read back as STALE CONTENTS. A blank line
+            # stays part of the run only while an entry resumes after it,
+            # so prose sitting between the list and the next heading is
+            # kept -- never replace "everything up to the next heading",
+            # which once deleted that prose on every page that had any.
+            if CONTENTS_ITEM_LINE.match(lines[i].lstrip()):
+                i += 1
+            elif lines[i].strip() == '':
+                j = i
+                while j < len(lines) and lines[j].strip() == '':
+                    j += 1
+                if j < len(lines) and CONTENTS_ITEM_LINE.match(
+                        lines[j].lstrip()):
+                    i = j
+                else:
+                    break
+            else:
+                break
         tail = m.end() + sum(len(l) for l in lines[:i])
         new_text = text[:m.start()] + block + text[tail:]
     else:

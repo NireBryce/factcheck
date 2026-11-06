@@ -1,6 +1,6 @@
 """contents + the fix-contents fixer: staleness, the missing-block half
 (the one whose absence once hid a deletion), exemptions, and the fixer's
-bullet-only replacement guarantee."""
+entry-run replacement guarantee (entries at any indentation, prose kept)."""
 from .helpers import Tree
 
 from factcheck.checks.contents import (
@@ -98,6 +98,36 @@ class FixContents(Tree):
         self.assertIn('kept prose', text)
         self.assertIn('- [Real](#real)', text)
         self.assertNotIn('Stale', text)
+
+    def test_indented_entries_are_replaced_too(self):
+        # A hand-written indented entry for a `###` heading used to
+        # survive the rewrite -- only unindented bullet lines were
+        # consumed -- leaving the section listed twice and the page
+        # reading as STALE CONTENTS afterwards.
+        self.write('wiki/p.md',
+                   '# P\n\n## Contents\n\n'
+                   '- [Alpha](#alpha)\n  - [Alpha One](#alpha-one)\n'
+                   '- [Beta](#beta)\n\n'
+                   '## Alpha\n\n### Alpha One\n\n## Beta\n')
+        self.fix('wiki/p.md')
+        text = (self.root / 'wiki/p.md').read_text()
+        self.assertEqual(
+            text,
+            '# P\n\n## Contents\n\n'
+            '- [Alpha](#alpha)\n- [Beta](#beta)\n\n'
+            '## Alpha\n\n### Alpha One\n\n## Beta\n')
+
+    def test_prose_between_block_and_next_heading_is_kept(self):
+        # The indented-entry rule must not grow into replacing everything
+        # up to the next heading, which once deleted prose after the block.
+        self.write('wiki/p.md',
+                   '# P\n\n## Contents\n\n'
+                   '- [One](#one)\n  - [One A](#one-a)\n\n'
+                   'kept prose\n\n## One\n')
+        self.fix('wiki/p.md')
+        text = (self.root / 'wiki/p.md').read_text()
+        self.assertIn('kept prose', text)
+        self.assertNotIn('[One A](#one-a)', text)
 
     def test_idempotent(self):
         self.write('wiki/p.md', '# P\n\n## One\n')
