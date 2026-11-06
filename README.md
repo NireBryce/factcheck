@@ -89,7 +89,7 @@ it (`plugins/readme_checks_table.py`).
 | check | claims it checks | bindings (config) |
 |---|---|---|
 | `conflicts` | a merge left its conflict markers in a doc: a `<<<<<<<` or `>>>>>>>` line, and a bare `=======` or diff3 base marker between them (alone `=======` is a heading underline). Hard in prose, REVIEW inside fenced code; a fence that shows a conflict on purpose takes `<!-- conflict-ok: reason -->` on the line before it | scope `docs` |
-| `recipes` | every backtick `` `just <recipe>` `` mention names a real recipe (handles `just key=value <recipe>` overrides and `mod` module names) | scope `docs`, `[recipes] justfile` |
+| `recipes` | every backtick `` `just <recipe>` `` mention names a real recipe (handles `just key=value <recipe>` overrides, `mod` module names, and just's flags and their values) | scope `docs`, `[recipes] justfile` |
 | `skills` | every "skill X" / "X skill" mention names a real skill directory | scope `docs`, `[skills] dirs` |
 | `skill-files` | the skill files themselves: the four lookups re-applied to skill prose (backticked-anywhere, bare-in-fences `just` mentions; skill mentions; relative links; repo-rooted backtick paths), plus SKILL.md-only rules — frontmatter `name` matching its directory, a one-sentence description with no repo paths, `when_to_use` under the harness listing cap, plain-YAML-safe values, unknown frontmatter keys, the `**Needs:**` tag vocabulary, and a ban on ` ```! ` / `!`backtick`` ` injection syntax | `[skills] dirs`, `[recipes] justfile`, `[skill-files]` keys/caps/prefixes/needs |
 | `links` | every relative markdown link resolves to a real file (percent-decoded first) | scope `docs` |

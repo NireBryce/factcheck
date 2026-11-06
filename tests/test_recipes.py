@@ -81,6 +81,34 @@ class Recipes(Tree):
         self.write('docs/guide.md', 'run `just build`.\n')
         self.assertEqual(self.findings(), [])
 
+    def test_flags_in_a_mention_are_not_recipes(self):
+        # `just --list`, `just -n build`: a leading flag is not the recipe
+        # being run, and `just --list` names no recipe at all.
+        self.write('docs/guide.md',
+                   'run `just --list`, `just -n build`, `just build`.\n')
+        self.assertEqual(self.findings(), [])
+
+    def test_unknown_recipe_still_found_behind_flags(self):
+        self.write('docs/guide.md', 'run `just -n gone`.\n')
+        f = self.findings()
+        self.assertEqual([x.tag for x in f], ['UNKNOWN RECIPE'])
+        self.assertIn("'gone'", f[0].message)
+
+    def test_value_taking_flags_step_over_their_value(self):
+        # From `just --help` (1.58.0): -f/--justfile and -d/--working-
+        # directory take one value, --set takes two.
+        self.write('docs/guide.md',
+                   'run `just --justfile other.just build`, '
+                   '`just -d sub build`, `just --set host h build`.\n')
+        self.assertEqual(self.findings(), [])
+
+    def test_command_and_evaluate_name_no_recipe(self):
+        # --command runs an arbitrary command and --evaluate prints
+        # variables; what follows them is not a recipe.
+        self.write('docs/guide.md',
+                   'run `just -c bash -c \'ls\'` and `just --evaluate host`.\n')
+        self.assertEqual(self.findings(), [])
+
     def test_justfile_location_is_configurable(self):
         self.write('tools/Justfile', 'deploy:\n    true\n')
         self.write('docs/guide.md', 'run `just deploy`.\n')
