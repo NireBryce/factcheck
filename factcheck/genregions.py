@@ -60,7 +60,8 @@ def render_table(headers, rows):
 
 def parse_table(body):
     """[{header: cell}, ...] for the first markdown table in `body`; [] if
-    there is none (a region being adopted for the first time)."""
+    there is none (a region being adopted for the first time). Raises
+    GenError for a row whose cell count differs from the header's."""
     lines = [l.strip() for l in body.splitlines()
              if l.strip().startswith('|')]
     if len(lines) < 2:
@@ -69,7 +70,18 @@ def parse_table(body):
     def split(l):
         return [c.strip() for c in CELL_SPLIT.split(l.strip('|'))]
     headers = split(lines[0])
-    return [dict(zip(headers, split(l))) for l in lines[2:]]
+    rows = []
+    for l in lines[2:]:
+        cells = split(l)
+        if len(cells) != len(headers):
+            # zip() would drop the extra cells, and with them the hand
+            # text the next write run is about to carry over.
+            raise GenError(
+                f"a table row has {len(cells)} cells, the header has "
+                f"{len(headers)} -- a literal `|` in a cell is written "
+                f"`\\|`: {l[:60]}")
+        rows.append(dict(zip(headers, cells)))
+    return rows
 
 
 def _same_key(row_id, cell):

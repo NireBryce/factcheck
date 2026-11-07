@@ -117,9 +117,9 @@ anything is broken.
 The README's checks table, config keys and examples are claims about the
 code. Grep for the names you changed before calling it done. A new check
 gets its table row from `python3 -m factcheck fix-generated README.md`,
-then the two hand cells. Write a literal `|` in a hand cell as `\|`: the
-generator splits cells on bare pipes and drops the rest of the row without
-a message.
+then the two hand cells. Write a literal `|` in a hand cell as `\|`; a
+bare one makes the row the wrong width, which `generated` reports as GEN
+ERROR.
 
 **Fix small things only in files you're already changing** (skill
 `boyscouting`). A defect anywhere else gets proposed, not fixed (skill

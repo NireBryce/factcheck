@@ -1,6 +1,8 @@
 """The generated-region engine: region syntax, staleness, hand-column
 preservation keyed by row, broken/duplicate/missing regions, and the
 fence-masking rule."""
+import unittest
+
 from .helpers import Tree
 
 from factcheck import genregions
@@ -81,6 +83,29 @@ class GenRegions(Tree):
                    '<!-- generated:test-table -- from x -->\n'
                    '````\n')
         self.assertEqual([x.tag for x in self.findings()], ['MISSING REGION'])
+
+    def test_unescaped_pipe_in_a_hand_cell_is_a_gen_error(self):
+        self.region_page(self.TABLE.replace('does a', 'does a | and more'))
+        f = self.findings()
+        self.assertEqual([x.tag for x in f], ['GEN ERROR'])
+        self.assertIn('4 cells, the header has 3', f[0].message)
+        self.assertIn('`\\|`', f[0].message)
+
+    def test_a_write_run_leaves_a_malformed_table_untouched(self):
+        self.region_page(self.TABLE.replace('does a', 'does a | and more'))
+        page = self.root / 'wiki/table.md'
+        before = page.read_text()
+        findings, _ = genregions.run(self.root, [page], write=True)
+        self.assertEqual([x.tag for x in findings], ['GEN ERROR'])
+        self.assertEqual(page.read_text(), before)
+
+    def test_escaped_pipe_stays_one_cell_and_survives_a_write(self):
+        table = self.TABLE.replace('does a', 'does a \\| and more')
+        self.region_page(table)
+        self.assertEqual(self.findings(), [])
+        page = self.root / 'wiki/table.md'
+        genregions.run(self.root, [page], write=True)
+        self.assertIn('does a \\| and more', page.read_text())
 
     def test_write_rewrites_and_reports_dropped_rows(self):
         self.region_page(
