@@ -3,4 +3,4 @@
 from . import (  # noqa: F401
     anchors, commands, conflicts, contents, counts, dates, docrefs, drift,
     fixrefs, generated, history, lessons, links, paths, pins, recipes,
-    restatement, rules, siblings, skillfiles, skills, summaries)
+    restatement, rules, siblings, skillfiles, skills, summaries, symbol_refs)
