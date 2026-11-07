@@ -10,6 +10,7 @@ import shutil
 
 _CAPABILITIES = {
     'nix': lambda: shutil.which('nix') is not None,
+    'gh': lambda: shutil.which('gh') is not None,
 }
 
 
