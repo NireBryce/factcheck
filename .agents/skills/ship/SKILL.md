@@ -118,6 +118,32 @@ what GitHub does to it when the base branch is deleted. Each PR still
 gets its own merge-and-delete question, and the body says which PR it
 is stacked on.
 
+Merge the base with a merge commit, not a rebase. A rebase merge gives
+the base's commits new SHAs on `main`, while the child's branch still
+carries the old ones, so the child shows them again after the retarget.
+
+## A PR branch that conflicts with `main`
+
+Merge `origin/main` into the branch and push it as a fast-forward
+(`git push origin HEAD:<branch>`), then wait for CI on the new head and
+merge pinned to it. A rebase needs `--force-with-lease`, which a cloud
+session's permission layer can deny; don't look for a way around that.
+
+PRs that each add a check conflict in the same two places: the import
+list in `factcheck/checks/__init__.py` (resolve it by hand) and the
+README checks table (run `python3 -m factcheck fix-generated README.md`,
+fill the new row's hand cells, then `scripts/check` before committing
+the merge).
+
+## In a cloud session
+
+`gh` is read-only there: the proxy answers a PR write, a branch delete
+(`gh api -X DELETE`, `git push --delete`) or a read of an unattached
+repo with HTTP 403. Create, retarget and merge PRs with the GitHub MCP
+tools. For the branch deletion, say it was refused and ask the user to
+delete the branches or turn on "automatically delete head branches";
+don't retry.
+
 ## See also
 
 - `use-a-worktree`: where the branch lives while you work.

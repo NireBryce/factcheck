@@ -46,6 +46,13 @@ Verify you are in it (`git -C <path> status -sb`) before anything that
 changes state. A shell tool can reset cwd between calls, so use absolute
 paths or `git -C`.
 
+**Give `worktree add` an absolute path.** `git -C <repo> worktree add
+<path>` resolves a relative `<path>` against `<repo>`, not your shell's
+directory: `git -C wt-a worktree add wt-b` puts `wt-b` inside `wt-a`. An
+unset variable in the path (`"$S/wt-b"` with `$S` empty) becomes `/wt-b`.
+Echo the variable first, and read `git worktree list` afterwards to see
+where it landed.
+
 **Already edited in the shared checkout?** Move the edits instead of
 committing there, and only when every dirty path is yours:
 
