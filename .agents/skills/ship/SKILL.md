@@ -90,16 +90,18 @@ it. Not ready: fix what's red (`gh run view <run> --log-failed`), push,
 and gate again. Don't ask.
 
 Ready: show the title, URL, commit list and the merge method, then ask
-**one** question that covers both merging and deleting the branch. Use
-rebase for a single commit, and a merge commit for several, whose messages
-carry reasoning a squash would flatten.
+**one** question that covers both merging and deleting the branch. Use a
+merge commit, whatever the commit count: every PR in this repo's history
+landed as `Merge pull request #N`, and the commit messages carry reasoning
+a squash would flatten. (A rebase merge also rewrites the base of a
+stacked PR; see below.)
 
 **On no:** leave the PR open, say so, stop.
 
 ## 4. Merge, then delete, on yes only
 
 ```sh
-gh pr merge <n> --rebase --match-head-commit <headRefOid>   # or --merge
+gh pr merge <n> --merge --match-head-commit <headRefOid>
 gh pr view <n> --json state          # must read MERGED
 git push origin --delete <branch>    # if GitHub didn't already
 git branch -D <branch>
@@ -118,9 +120,10 @@ what GitHub does to it when the base branch is deleted. Each PR still
 gets its own merge-and-delete question, and the body says which PR it
 is stacked on.
 
-Merge the base with a merge commit, not a rebase. A rebase merge gives
-the base's commits new SHAs on `main`, while the child's branch still
-carries the old ones, so the child shows them again after the retarget.
+The base merges as a merge commit like any other PR, never as a rebase:
+a rebase merge gives the base's commits new SHAs on `main`, while the
+child's branch still carries the old ones, so the child shows them again
+after the retarget.
 
 ## A PR branch that conflicts with `main`
 
