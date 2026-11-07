@@ -115,7 +115,11 @@ anything is broken.
 
 **A change that makes the README stale fixes it in the same change.**
 The README's checks table, config keys and examples are claims about the
-code. Grep for the names you changed before calling it done.
+code. Grep for the names you changed before calling it done. A new check
+gets its table row from `python3 -m factcheck fix-generated README.md`,
+then the two hand cells. Write a literal `|` in a hand cell as `\|`: the
+generator splits cells on bare pipes and drops the rest of the row without
+a message.
 
 **Fix small things only in files you're already changing** (skill
 `boyscouting`). A defect anywhere else gets proposed, not fixed (skill
@@ -179,6 +183,7 @@ broken and here is the fix" beats incident framing.
 scripts/check                        # tests + registry listing + self-check; what CI runs
 python3 -m unittest tests.test_links # one test module
 python3 -m factcheck <check> --root <repo>   # one check against another repo
+python3 -m factcheck <check> --root <repo> --config <file>   # config kept outside that repo
 ```
 
 `git config core.hooksPath .githooks` wires the git hooks: `commit-msg`
