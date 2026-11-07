@@ -10,7 +10,9 @@ This check reads the named file and requires each name to occur in it as
 a whole word (so `_safe` does not match inside `_safely`). A parenthesis
 counts only when every item is a bare or backticked identifier, optionally
 dotted (`Class.method`, each part checked) or ending `()`; `(see below)`
-or `(old, removed in v2)` is prose and is left alone.
+or `(old, removed in v2)` is prose and is left alone. An item ending in
+a file extension (`[paths] exts`) names a file, not a symbol, so a
+parenthesis holding one, `` `settings.json` (`reader.py`) ``, is skipped.
 
   - the file resolves (suffix match, as `paths`) and a name is absent from
     every candidate: a hard finding;
@@ -32,7 +34,7 @@ from ..findings import Finding
 from ..gitfiles import NotAGitCheckout, tracked_files
 from ..mdcore import fences
 from ..registry import check
-from .paths import normalize
+from .paths import DEFAULT_EXTS, normalize
 
 SYMBOL_OK = re.compile(r'<!--\s*symbol-ok:[^>]*-->')
 MENTION = re.compile(
@@ -43,13 +45,14 @@ SEE = ("a name beside a path that the file does not contain: a rename or "
        "<!-- symbol-ok: reason -->)")
 
 
-def names_in(parenthesised):
+def names_in(parenthesised, exts=DEFAULT_EXTS):
     """The identifiers in `a, `b`, C.d()`, or None when any item is not
-    one (the parenthesis is prose, not a name list)."""
+    one (the parenthesis is prose, not a name list) or is a file name
+    (it ends in one of `exts`)."""
     out = []
     for item in parenthesised.split(','):
         item = item.strip().strip('`').strip()
-        if not NAME.fullmatch(item):
+        if not NAME.fullmatch(item) or item.endswith(tuple(exts)):
             return None
         out.extend(p for p in item.removesuffix('()').split('.'))
     return out or None
@@ -84,6 +87,7 @@ def check_symbol_refs(root, cfg):
                 texts[rel] = None
         return texts[rel]
 
+    exts = cfg.section('paths').get('exts', DEFAULT_EXTS)
     findings = []
     for path in cfg.scope('docs'):
         rel = path.relative_to(root).as_posix()
@@ -91,7 +95,7 @@ def check_symbol_refs(root, cfg):
             if kind != fences.TEXT or SYMBOL_OK.search(line):
                 continue
             for m in MENTION.finditer(line):
-                names = names_in(m.group(2))
+                names = names_in(m.group(2), exts)
                 if names is None:
                     continue
                 bodies = [t for t in (read(c) for c in
