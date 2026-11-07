@@ -64,6 +64,22 @@ class SymbolRefs(Tree):
         self.assertEqual(len(self.findings(
             '`discover.py:3` (`_safe`, `_gone`)\n')), 1)
 
+    def test_a_parenthesis_naming_a_file_is_not_a_symbol_list(self):
+        # A line from a real consumer doc: the parenthesis is a second
+        # file, so it is neither split at the dot nor read against the
+        # first file.
+        self.write('.agents/settings.json', '{}\n')
+        self.assertEqual(self.findings(
+            "The only reader is for Claude Code's `.agents/settings.json` "
+            "(`reader_claude.py`).\n"), [])
+
+    def test_file_extensions_follow_the_paths_exts_config(self):
+        data = {'symbol-refs': {'enable': True}, 'paths': {'exts': ['.rs']}}
+        self.assertEqual(len(self.findings('`discover.py` (`gone.py`)\n',
+                                           data)), 2)
+        self.assertEqual(self.findings('`discover.py` (`gone.rs`)\n',
+                                       data), [])
+
     def test_opt_in(self):
         self.assertEqual(self.findings('`discover.py` (`_gone`)\n', {}), [])
 
