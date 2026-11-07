@@ -73,6 +73,34 @@ class IssueRefs(Tree):
         f = self.run_doc(doc)
         self.assertEqual([x.path for x in f], ['README.md:1'])
 
+    def test_another_projects_issue_is_not_looked_up(self):
+        f = self.run_doc('Adapted from nixos-configs issue #24, which '
+                         'planned this for that repo.\n')
+        self.assertEqual((f, self.calls), ([], []))
+        for word in ('other-project', '`other-project`', 'foo.bar', 'org/repo',
+                     '(other-project'):
+            with self.subTest(word=word):
+                self.assertEqual(self.run_doc(
+                    f'Tracked in {word} issue 24.\n'), [])
+                self.assertEqual(self.calls, [])
+
+    def test_plain_words_before_issue_still_resolve(self):
+        for word in ('the', 'follow-up', 'pre-existing', 'e.g.', 'see', ''):
+            with self.subTest(word=word):
+                self.assertEqual(len(self.run_doc(
+                    f'{word} issue 24 is planned.\n')), 1)
+
+    def test_foreign_names_are_configurable(self):
+        doc = 'Planned in upstream issue 24.\n'
+        self.assertEqual(len(self.run_doc(doc)), 1)
+        data = {'issue-refs': {**ON['issue-refs'], 'foreign': ['Upstream']}}
+        self.assertEqual(self.run_doc(doc, data), [])
+
+    def test_the_skip_does_not_hide_other_references_on_the_line(self):
+        f = self.run_doc('Planned in other-project issue 24 and #24.\n')
+        self.assertEqual([x.path for x in f], ['README.md:1'])
+        self.assertEqual(self.calls, [('o/r', 24)])
+
     def test_fences_and_opt_out(self):
         self.assertEqual(self.run_doc(
             '```\nTracked in #24.\n```\n'

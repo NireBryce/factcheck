@@ -9,10 +9,14 @@ speaks of it as not done.
     enable = true
     repo = "owner/name"      # default: the checkout's own, from `gh`
     all = false              # true: every closed reference, pending or not
+    foreign = ["name"]       # project names whose "name issue N" is not ours
 
 References read, outside fenced code: `issue N`, `#N` (not part of
 `owner/repo#N`, an HTML entity or a longer token) and an issue or pull URL
-into the same repo. A sentence reads as pending when it carries `tracked
+into the same repo. A reference is skipped when the word before it names
+another project: one with a hyphen, dot or slash in it (`other-project
+issue 24`; plain English like `follow-up` and `e.g.` excepted) or one
+listed in `foreign`. A sentence reads as pending when it carries `tracked
 in`, `see issue`, `until`, `planned`, `TODO`, `pending`, `not yet`,
 `future` or `the <words> work`. Every finding is REVIEW: whether a closed
 issue's sentence is stale is a human's call, and a citation kept as
@@ -37,6 +41,10 @@ REF = re.compile(
 PENDING = re.compile(
     r'\b(?:tracked in|see issue|until|planned|pending|not yet|future)\b'
     r'|\bTODO\b|\bthe [^.]{1,40}? work\b', re.I)
+# Hyphenated words that are English, not project names: "follow-up issue".
+PLAIN_PREFIXES = frozenset(
+    'follow pre non sub long open re co cross half'.split())
+ABBREVIATIONS = frozenset(['e.g', 'i.e', 'etc', 'cf', 'vs'])
 SENTENCE_END = re.compile(r'(?<=[.!?])\s+')
 SEE = ("a closed issue cited as pending: update the sentence to say what "
        "shipped, or mark a citation kept as history <!-- issue-ok: reason -->")
@@ -64,6 +72,21 @@ def own_repo(root):
     return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
 
 
+def other_project(line, start, foreign):
+    """Does the word just before offset `start` name another project?"""
+    words = line[:start].split()
+    if not words:
+        return False
+    tok = words[-1].strip('`*_"\'()[]<>,:;.!').lower()
+    if tok in foreign:
+        return True
+    if tok in ABBREVIATIONS or not re.search(r'[-./]', tok):
+        return False
+    if '-' in tok and not re.search(r'[./]', tok):
+        return tok.split('-')[0] not in PLAIN_PREFIXES
+    return True
+
+
 def sentence_around(line, start):
     """The sentence of `line` that holds offset `start`."""
     lo = 0
@@ -85,6 +108,7 @@ def check_issue_refs(root, cfg):
                         "no [issue-refs] repo and `gh repo view` found none",
                         review=True)]
     every = bool(s.get('all'))
+    foreign = {n.lower() for n in s.get('foreign', [])}
     cache = {}
     failed = set()
     findings = []
@@ -96,6 +120,9 @@ def check_issue_refs(root, cfg):
             for m in REF.finditer(line):
                 if m.group(3) and m.group(3) != repo:
                     continue            # another repo's issue
+                if not m.group(3) and other_project(line, m.start(),
+                                                    foreign):
+                    continue            # "other-project issue N"
                 num = int(m.group(1) or m.group(2) or m.group(4))
                 if num not in cache:
                     cache[num] = lookup(root, repo, num)
